@@ -1,0 +1,152 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum TaskStatus {
+  SCHEDULED
+  READY
+  ASSIGNED
+  DISPATCHED
+  EN_ROUTE
+  ARRIVED
+  AWAITING_CONFIRMATION
+  SNOOZED
+  RETRY_PENDING
+  COMPLETED
+  STAFF_ATTENTION_REQUIRED
+  CANCELLED
+  FAILED
+}
+
+enum RoverStatus {
+  IDLE
+  MOVING
+  ARRIVED
+  WAITING
+  RETURNING
+  CHARGING
+  OFFLINE
+  ESTOP
+}
+
+enum ActorType {
+  SYSTEM
+  CAREGIVER
+  RESIDENT
+  ROVER
+}
+
+model Resident {
+  id             String               @id @default(uuid())
+  name           String
+  roomNumber     String
+  notes          String?
+  schedules      RoverSchedule[]
+  tasks          RoverTask[]
+  assistanceReqs ResidentAssistance[]
+  createdAt      DateTime             @default(now())
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  number    String   @unique
+  name      String
+  waypointX Float
+  waypointY Float
+  zone      String   @default("RESIDENT_WING")
+}
+
+model RoverDevice {
+  id           String      @id @default(uuid())
+  name         String      @unique
+  status       RoverStatus @default(IDLE)
+  batteryLevel Int         @default(100)
+  currentRoom  String?
+  currentX     Float       @default(0.0)
+  currentY     Float       @default(0.0)
+  lastSeenAt   DateTime    @default(now())
+  isActive     Boolean     @default(true)
+  tasks        RoverTask[]
+}
+
+model RoverSchedule {
+  id                String      @id @default(uuid())
+  residentId        String
+  resident          Resident    @relation(fields: [residentId], references: [id])
+  roomId            String
+  itemName          String
+  scheduledTime     String      // e.g. "10:00" or "11:00"
+  frequency         String      @default("ONCE")
+  assignedStaffId   String
+  roverId           String
+  maxAttempts       Int         @default(3)
+  snoozeDurationMin Int         @default(10)
+  isActive          Boolean     @default(true)
+  tasks             RoverTask[]
+  createdAt         DateTime    @default(now())
+}
+
+model RoverTask {
+  id            String             @id @default(uuid())
+  scheduleId    String?
+  schedule      RoverSchedule?     @relation(fields: [scheduleId], references: [id])
+  residentId    String
+  resident      Resident           @relation(fields: [residentId], references: [id])
+  roomId        String
+  roverId       String
+  rover         RoverDevice        @relation(fields: [roverId], references: [id])
+  status        TaskStatus         @default(SCHEDULED)
+  scheduledAt   DateTime
+  startedAt     DateTime?
+  arrivedAt     DateTime?
+  completedAt   DateTime?
+  attemptCount  Int                @default(0)
+  snoozedUntil  DateTime?
+  failureReason String?
+  attempts      RoverTaskAttempt[]
+  auditLogs     RoverAuditLog[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+}
+
+model RoverTaskAttempt {
+  id            String    @id @default(uuid())
+  taskId        String
+  task          RoverTask @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  attemptNumber Int
+  startedAt     DateTime  @default(now())
+  arrivedAt     DateTime?
+  completedAt   DateTime?
+  result        String    // SUCCESS, SNOOZED, ESCALATED, FAILED
+  reason        String?
+  notes         String?
+}
+
+model RoverAuditLog {
+  id        String     @id @default(uuid())
+  taskId    String?
+  task      RoverTask? @relation(fields: [taskId], references: [id], onDelete: SetNull)
+  actorType ActorType
+  actorId   String
+  event     String
+  metadata  Json?
+  createdAt DateTime   @default(now())
+}
+
+model ResidentAssistance {
+  id             String    @id @default(uuid())
+  residentId     String
+  resident       Resident  @relation(fields: [residentId], references: [id])
+  roomId         String
+  requestType    String    @default("GENERAL_ASSISTANCE")
+  status         String    @default("PENDING")
+  acknowledgedAt DateTime?
+  resolvedAt     DateTime?
+  notes          String?
+  createdAt      DateTime  @default(now())
+}
