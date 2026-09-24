@@ -28,3 +28,8 @@ Thumbs.db
 
 # Prisma generated files (if outside node_modules)
 /server/prisma/migrations/
+
+# Local media uploads
+server/uploads/*
+!server/uploads/.gitkeep
+

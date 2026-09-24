@@ -34,6 +34,13 @@ enum RoverStatus {
   ESTOP
 }
 
+enum UserRole {
+  ADMIN
+  NURSE
+  CAREGIVER
+  STAFF
+}
+
 enum ActorType {
   SYSTEM
   CAREGIVER
@@ -46,9 +53,16 @@ model Resident {
   name           String
   roomNumber     String
   notes          String?
+  photoUrl       String?
+  faceEmbeddings Json?                // 128D Float Vector or multi-pose cluster
+  isEnrolled     Boolean              @default(false)
+  enrolledAt     DateTime?
   schedules      RoverSchedule[]
   tasks          RoverTask[]
   assistanceReqs ResidentAssistance[]
+  activities     Activity[]
+  healthLogs     HealthLog[]
+  mediaAssets    MediaAsset[]
   createdAt      DateTime             @default(now())
 }
 
@@ -80,6 +94,7 @@ model RoverSchedule {
   resident          Resident    @relation(fields: [residentId], references: [id])
   roomId            String
   itemName          String
+  medications       Json?       // Array of { name, dose, instructions, compartment }
   scheduledTime     String      // e.g. "10:00" or "11:00"
   frequency         String      @default("ONCE")
   assignedStaffId   String
@@ -100,6 +115,7 @@ model RoverTask {
   roomId        String
   roverId       String
   rover         RoverDevice        @relation(fields: [roverId], references: [id])
+  medications   Json?              // Array of { name, dose, instructions, compartment }
   status        TaskStatus         @default(SCHEDULED)
   scheduledAt   DateTime
   startedAt     DateTime?
@@ -150,3 +166,57 @@ model ResidentAssistance {
   notes          String?
   createdAt      DateTime  @default(now())
 }
+
+model User {
+  id           String    @id @default(uuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  role         UserRole  @default(CAREGIVER)
+  badgeId      String?
+  avatarUrl    String?
+  isActive     Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Activity {
+  id          String    @id @default(uuid())
+  residentId  String
+  resident    Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  type        String    // MEAL, EXERCISE, MEDICATION, SOCIAL, VISION_DETECTION, CHECK_IN
+  title       String
+  notes       String?
+  loggedBy    String    @default("System")
+  timestamp   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+model HealthLog {
+  id          String    @id @default(uuid())
+  residentId  String
+  resident    Resident  @relation(fields: [residentId], references: [id], onDelete: Cascade)
+  systolic    Int?
+  diastolic   Int?
+  heartRate   Int?
+  bloodSugar  Float?
+  temperature Float?
+  oxygenLevel Int?
+  notes       String?
+  loggedBy    String    @default("Staff")
+  timestamp   DateTime  @default(now())
+  createdAt   DateTime  @default(now())
+}
+
+model MediaAsset {
+  id          String    @id @default(uuid())
+  residentId  String?
+  resident    Resident? @relation(fields: [residentId], references: [id], onDelete: SetNull)
+  url         String
+  s3Key       String?
+  type        String    @default("PHOTO") // PHOTO, VIDEO, DOCUMENT
+  caption     String?
+  source      String    @default("KIOSK") // KIOSK, ROVER_CAMERA, UPLOAD
+  createdAt   DateTime  @default(now())
+}
+

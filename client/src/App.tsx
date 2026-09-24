@@ -1,74 +1,110 @@
 import { useState } from 'react';
+import { AuthProvider, useAuth } from './context/AuthContext.js';
+import { Header } from './components/Header.js';
+import { Dashboard } from './components/Dashboard.js';
+import { MissionMonitor } from './components/MissionMonitor.js';
+import { SchedulesManagement } from './components/SchedulesManagement.js';
+import { ResidentsManagement } from './components/ResidentsManagement.js';
+import { RoverKiosk } from './components/RoverKiosk.js';
+import { AuditLogViewer } from './components/AuditLogViewer.js';
+import { DemoToolbar } from './components/DemoToolbar.js';
+import { JudgeDemoModal } from './components/JudgeDemoModal.js';
+import { ScheduleModal } from './components/ScheduleModal.js';
+import { AuthModal } from './components/AuthModal.js';
 
-export default function App() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'monitor' | 'kiosk' | 'audit'>('dashboard');
+function AppContent() {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'monitor' | 'schedules' | 'residents' | 'kiosk' | 'audit'>('dashboard');
+  const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
+  const [isJudgeModalOpen, setIsJudgeModalOpen] = useState(false);
+  const [currentRole, setCurrentRole] = useState('Nurse Sarah Jenkins (RN-402)');
+
+  const { isAuthModalOpen, setIsAuthModalOpen } = useAuth();
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Top Navigation Bar */}
-      <header style={{
-        background: 'rgba(15, 23, 42, 0.8)',
-        backdropFilter: 'blur(12px)',
-        borderBottom: '1px solid var(--border-subtle)',
-        padding: '16px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        position: 'sticky',
-        top: 0,
-        zIndex: 50
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <div style={{
-            width: '40px',
-            height: '40px',
-            borderRadius: '10px',
-            background: 'linear-gradient(135deg, #0ea5e9, #38bdf8)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '22px'
-          }}>
-            🤖
-          </div>
-          <div>
-            <h1 style={{ fontSize: '1.25rem', fontWeight: 700, margin: 0 }}>HSL CARE</h1>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
-              Smart Rover Autonomous Delivery & Assistance
-            </p>
-          </div>
-        </div>
-
-        <nav style={{ display: 'flex', gap: '8px' }}>
-          {(['dashboard', 'monitor', 'kiosk', 'audit'] as const).map(tab => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={activeTab === tab ? 'btn btn-primary' : 'btn btn-secondary'}
-              style={{ textTransform: 'capitalize', padding: '8px 16px', fontSize: '0.85rem' }}
-            >
-              {tab === 'kiosk' ? '📱 Rover Kiosk' : tab}
-            </button>
-          ))}
-        </nav>
-      </header>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '70px' }}>
+      {/* Top Application Header */}
+      <Header
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        onOpenSchedule={() => setIsScheduleModalOpen(true)}
+        currentRole={currentRole}
+        setCurrentRole={setCurrentRole}
+      />
 
       {/* Main Content Area */}
-      <main style={{ flex: 1, padding: '24px', maxWidth: '1400px', margin: '0 auto', width: '100%' }}>
-        <div className="glass-panel" style={{ padding: '32px', textAlign: 'center' }}>
-          <h2 style={{ fontSize: '1.75rem', marginBottom: '8px' }}>
-            Phase 0 & 1 Initialized Successfully
-          </h2>
-          <p style={{ color: 'var(--text-secondary)', maxWidth: '600px', margin: '0 auto 24px auto' }}>
-            HSL Care Smart Rover core architecture, PostgreSQL Prisma models, deterministic seed data, and monorepo structure are ready.
-          </p>
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '12px' }}>
-            <span className="badge badge-ready">Database: PostgreSQL</span>
-            <span className="badge badge-arrived">ORM: Prisma 6.4</span>
-            <span className="badge badge-completed">Hardware: UGV-Beast / Pi</span>
-          </div>
-        </div>
+      <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            currentRole={currentRole}
+            isScheduleModalOpen={isScheduleModalOpen}
+            onCloseScheduleModal={() => setIsScheduleModalOpen(false)}
+            onNavigateToSchedules={() => setActiveTab('schedules')}
+          />
+        )}
+
+        {activeTab === 'monitor' && (
+          <MissionMonitor currentRole={currentRole} />
+        )}
+
+        {activeTab === 'schedules' && (
+          <SchedulesManagement
+            currentRole={currentRole}
+            onOpenCreate={() => setIsScheduleModalOpen(true)}
+          />
+        )}
+
+        {activeTab === 'residents' && (
+          <ResidentsManagement
+            currentRole={currentRole}
+            onNavigateToSchedules={() => setActiveTab('schedules')}
+          />
+        )}
+
+        {activeTab === 'kiosk' && (
+          <RoverKiosk currentRole={currentRole} />
+        )}
+
+        {activeTab === 'audit' && (
+          <AuditLogViewer />
+        )}
       </main>
+
+      {/* Global Schedule Creation Modal */}
+      <ScheduleModal
+        isOpen={isScheduleModalOpen}
+        onClose={() => setIsScheduleModalOpen(false)}
+        onSuccess={() => setIsScheduleModalOpen(false)}
+        currentRole={currentRole}
+      />
+
+      {/* Presenter Floating Toolbar */}
+      <DemoToolbar
+        onOpenPitchModal={() => setIsJudgeModalOpen(true)}
+      />
+
+      {/* Judge Pitch Guide Modal */}
+      <JudgeDemoModal
+        isOpen={isJudgeModalOpen}
+        onClose={() => setIsJudgeModalOpen(false)}
+        onNavigateTab={(tab) => setActiveTab(tab)}
+        onTriggerHeroReset={() => {
+          fetch('/api/rover/demo/reset', { method: 'POST' }).catch(console.error);
+        }}
+      />
+
+      {/* Multi-role Staff Authentication & Quick Switcher Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

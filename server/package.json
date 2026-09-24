@@ -2,6 +2,7 @@
   "name": "hsl-rover-server",
   "version": "1.0.0",
   "private": true,
+  "type": "module",
   "description": "Backend API & Task State Machine for HSL Care Smart Rover",
   "main": "src/server.ts",
   "scripts": {
@@ -12,23 +13,32 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "test:fsm": "tsx src/tests/verifyPhase2.ts",
+    "test:api": "tsx src/tests/verifyPhase3.ts",
+    "test:rover": "tsx src/tests/verifyPhase4.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1139.0",
     "@prisma/client": "^6.4.1",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.3",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/node": "^22.13.9",
     "prisma": "^6.4.1",
+    "socket.io-client": "^4.8.3",
     "tsx": "^4.19.3",
     "typescript": "^5.8.2"
   }
