@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext.js';
+import { LoginPage } from './components/LoginPage.js';
+import { ResidentPortal } from './components/ResidentPortal.js';
 import { Header } from './components/Header.js';
 import { Dashboard } from './components/Dashboard.js';
 import { MissionMonitor } from './components/MissionMonitor.js';
@@ -18,8 +20,41 @@ function AppContent() {
   const [isJudgeModalOpen, setIsJudgeModalOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState('Nurse Sarah Jenkins (RN-402)');
 
-  const { isAuthModalOpen, setIsAuthModalOpen } = useAuth();
+  const { sessionType, currentResident, logout, isAuthModalOpen, setIsAuthModalOpen, isLoading } = useAuth();
 
+  // Show subtle loading state while checking session
+  if (isLoading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'hsl(222, 47%, 9%)',
+        color: '#38bdf8',
+        fontWeight: 700
+      }}>
+        Initializing HSL Care Smart Rover OS...
+      </div>
+    );
+  }
+
+  // 1. Strict Gate: If not authenticated, show full-screen LoginPage (no dashboard without login)
+  if (!sessionType) {
+    return <LoginPage />;
+  }
+
+  // 2. Resident Portal: If logged in as resident, show dedicated simple resident page
+  if (sessionType === 'RESIDENT' && currentResident) {
+    return (
+      <ResidentPortal
+        resident={currentResident}
+        onLogout={logout}
+      />
+    );
+  }
+
+  // 3. Staff Portal: Full caregiver and administrative command center
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '70px' }}>
       {/* Top Application Header */}

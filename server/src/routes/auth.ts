@@ -193,3 +193,73 @@ authRouter.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Respon
     res.status(500).json({ success: false, error: err.message });
   }
 });
+
+// POST /resident-login for Resident In-Room Portal
+authRouter.post('/resident-login', async (req: Request, res: Response) => {
+  try {
+    const { residentId, roomNumber } = req.body;
+
+    let resident;
+    if (residentId) {
+      resident = await prisma.resident.findUnique({
+        where: { id: residentId },
+        include: {
+          schedules: { where: { isActive: true }, orderBy: { scheduledTime: 'asc' } },
+          tasks: { orderBy: { createdAt: 'desc' }, take: 5 },
+          activities: { orderBy: { timestamp: 'desc' }, take: 10 },
+          healthLogs: { orderBy: { timestamp: 'desc' }, take: 5 }
+        }
+      });
+    } else if (roomNumber) {
+      resident = await prisma.resident.findFirst({
+        where: { roomNumber: String(roomNumber).trim() },
+        include: {
+          schedules: { where: { isActive: true }, orderBy: { scheduledTime: 'asc' } },
+          tasks: { orderBy: { createdAt: 'desc' }, take: 5 },
+          activities: { orderBy: { timestamp: 'desc' }, take: 10 },
+          healthLogs: { orderBy: { timestamp: 'desc' }, take: 5 }
+        }
+      });
+    } else {
+      // Default to Mary Johnson (Room 102) for fast demo
+      resident = await prisma.resident.findFirst({
+        where: { roomNumber: '102' },
+        include: {
+          schedules: { where: { isActive: true }, orderBy: { scheduledTime: 'asc' } },
+          tasks: { orderBy: { createdAt: 'desc' }, take: 5 },
+          activities: { orderBy: { timestamp: 'desc' }, take: 10 },
+          healthLogs: { orderBy: { timestamp: 'desc' }, take: 5 }
+        }
+      });
+    }
+
+    if (!resident) {
+      res.status(404).json({
+        success: false,
+        error: 'Resident profile not found.'
+      });
+      return;
+    }
+
+    await logAuditEvent(prisma, {
+      actorType: ActorType.RESIDENT,
+      actorId: resident.name,
+      event: 'RESIDENT_PORTAL_LOGIN',
+      metadata: {
+        residentId: resident.id,
+        roomNumber: resident.roomNumber,
+        device: 'IN_ROOM_TABLET'
+      }
+    });
+
+    res.json({
+      success: true,
+      sessionType: 'RESIDENT',
+      resident
+    });
+  } catch (err: any) {
+    console.error('Resident login error:', err);
+    res.status(500).json({ success: false, error: err.message });
+  }
+});
+

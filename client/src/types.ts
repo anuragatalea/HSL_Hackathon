@@ -143,6 +143,7 @@ export interface ResidentAssistance {
 }
 
 export type UserRole = 'ADMIN' | 'NURSE' | 'CAREGIVER' | 'STAFF';
+export type AuthSessionType = 'STAFF' | 'RESIDENT';
 
 export interface User {
   id: string;

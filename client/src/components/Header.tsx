@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, ShieldCheck, UserCheck, Stethoscope, Radio, Wifi, WifiOff, Cpu, X, ChevronDown } from 'lucide-react';
+import { Bot, ShieldCheck, UserCheck, Stethoscope, Radio, Wifi, WifiOff, Cpu, X, ChevronDown, LogOut } from 'lucide-react';
 import { socket } from '../socket.js';
 import { useAuth } from '../context/AuthContext.js';
 
@@ -26,7 +26,7 @@ export function Header({
   currentRole: _currentRole,
   setCurrentRole
 }: HeaderProps) {
-  const { currentUser, setIsAuthModalOpen } = useAuth();
+  const { currentUser, setIsAuthModalOpen, logout } = useAuth();
   const [isConnected, setIsConnected] = useState(socket.connected);
   const [hardwareStatus, setHardwareStatus] = useState<HardwareStatus | null>(null);
   const [isHardwareModalOpen, setIsHardwareModalOpen] = useState(false);
@@ -321,6 +321,27 @@ export function Header({
           </div>
 
           <ChevronDown size={14} color="hsl(215, 20%, 65%)" style={{ marginLeft: '4px' }} />
+        </button>
+
+        {/* Staff Sign Out Button */}
+        <button
+          onClick={logout}
+          title="Sign out of staff portal"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            color: '#f87171',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+        >
+          <LogOut size={15} />
         </button>
       </div>
 
