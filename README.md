@@ -74,13 +74,13 @@ flowchart TD
         UGVBeast["Waveshare UGV-Beast (Raspberry Pi 4B/5 + Python)"]
     end
 
-    Frontend <-->|REST API + WebSockets| Backend
+    Frontend <-->|"REST API + WebSockets"| Backend
     Backend <--> Prisma
     Prisma <--> Postgres
     Backend --> LocalS3
 
-    RoverMgr -.->|ROVER_MODE=SIMULATION| VirtualRover
-    RoverMgr <===>|ROVER_MODE=HARDWARE (Socket.IO)| UGVBeast
+    RoverMgr -.->|"ROVER_MODE=SIMULATION"| VirtualRover
+    RoverMgr <===>|"ROVER_MODE=HARDWARE via Socket.IO"| UGVBeast
 ```
 
 ---
