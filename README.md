@@ -20,12 +20,8 @@ In senior care facilities, clinical staff walk an average of **4+ miles per shif
 - [Monorepo Project Layout](#-monorepo-project-layout)
 - [Prerequisites](#-prerequisites)
 - [Quick Start Guide](#-quick-start-guide)
-  - [1. Clone and Navigate](#1-clone-and-navigate)
-  - [2. Environment Configuration](#2-environment-configuration)
-  - [3. PostgreSQL Database Setup](#3-postgresql-database-setup)
-  - [4. Dependency Installation](#4-dependency-installation)
-  - [5. Database Schema & Deterministic Seed](#5-database-schema--deterministic-seed)
-  - [6. Launch Development Environment](#6-launch-development-environment)
+  - [Option A: Docker Setup (Recommended — One Command)](#option-a-docker-setup-recommended--one-command)
+  - [Option B: Native Local Setup (Node.js & Local PostgreSQL)](#option-b-native-local-setup-nodejs--local-postgresql)
 - [Default Staff Credentials & Demo Persona](#-default-staff-credentials--demo-persona)
 - [Dual Operation Modes](#-dual-operation-modes)
   - [Virtual Simulation Mode (Default)](#virtual-simulation-mode-default)
@@ -151,17 +147,15 @@ HSL_Hackathon/
 
 ## 🧰 Prerequisites
 
-Before setting up the project, ensure your environment has:
+Choose your preferred development approach:
 
-| Requirement | Minimum Version | Recommended | Notes |
-| :--- | :--- | :--- | :--- |
-| **Node.js** | `>= 18.0.0` | `v20.x` or `v22.x` LTS | In WSL/Linux, ensure NVM selects Node 20+ |
-| **npm** | `>= 9.0.0` | `10.x+` | Ships with modern Node.js |
-| **PostgreSQL** | `>= 14.0` | `15.x` / `16.x` / `18.x` | Running locally or via container |
-| **Python** | `3.9+` | `3.11+` | *Only needed if testing Raspberry Pi hardware client* |
+| Environment | Requirements | When to Choose |
+| :--- | :--- | :--- |
+| **🐳 Option A: Docker (Recommended)** | **Docker Desktop** (or Docker Engine + Compose v2+) | Zero host dependencies required. PostgreSQL, Node backend, Prisma seed, and React Vite frontend start in isolated containers with live hot-reloading. |
+| **💻 Option B: Native Host** | **Node.js 18+ / 20+ LTS**, **npm 9+**, **PostgreSQL 14+** | Direct local execution without container virtualization. |
 
 > [!TIP]
-> **WSL2 Developers**: If your default terminal reports an older Node.js version (e.g. `v12.x`), activate Node 20+ using NVM:
+> **WSL2 Developers (Native Mode)**: If your default terminal reports an older Node.js version (e.g. `v12.x`), activate Node 20+ using NVM:
 > ```bash
 > nvm use 20 || nvm use default
 > ```
@@ -170,29 +164,60 @@ Before setting up the project, ensure your environment has:
 
 ## 🚀 Quick Start Guide
 
-Follow these steps to run the complete platform from scratch.
+### 🐳 Option A: Docker Setup (Recommended — One Command)
 
-### 1. Clone and Navigate
+With Docker, you do not need to install PostgreSQL or configure local databases manually. Everything (PostgreSQL 16, Prisma migration & seed, Express API, Vite frontend) starts and links automatically.
 
+#### 1. Clone and Navigate
 ```bash
 git clone <repository-url>
 cd HSL_Hackathon
 ```
 
+#### 2. Start the Full Stack with Docker Compose
+```bash
+# Using npm script:
+npm run docker:up
+
+# Or directly with Docker Compose:
+docker compose up --build
+```
+
+Docker Compose will automatically:
+1. Spin up **PostgreSQL 16** (`hsl-postgres`) with healthchecks (mapped to host port `5433` to prevent collision with any existing local PostgreSQL).
+2. Build and start **Express Backend** (`hsl-server`), automatically executing `prisma db push` and `prisma db seed`.
+3. Build and start **React Vite Client** (`hsl-client`) with live source code mounting and hot reload.
+
+#### 3. Access the Applications
+- 💻 **Caregiver Web Portal & Kiosk**: [http://localhost:5173](http://localhost:5173)
+- 🚀 **Backend Health API**: [http://localhost:4000/api/health](http://localhost:4000/api/health)
+- 🗄️ **PostgreSQL (Host Tools / DBeaver)**: `localhost:5433` (User: `postgres`, Password: `postgres`, DB: `hsl_rover`)
+
+#### Helpful Docker Commands
+```bash
+# View live container logs
+npm run docker:logs          # or: docker compose logs -f
+
+# Stop containers
+npm run docker:down          # or: docker compose down
+
+# Hard reset (wipe database volume, re-migrate & re-seed)
+npm run docker:reset         # or: docker compose down -v && docker compose up --build
+```
+
 ---
 
-### 2. Environment Configuration
+### 💻 Option B: Native Local Setup (Node.js & Local PostgreSQL)
 
+If you prefer running services directly on your host machine:
+
+#### 1. Environment Configuration
 Create the server environment file from the provided template:
-
 ```bash
 cp server/.env.example server/.env
 ```
-
-Review `server/.env`. By default, it targets a local PostgreSQL database:
-
+Ensure `DATABASE_URL` matches your local PostgreSQL credentials:
 ```ini
-# server/.env
 DATABASE_URL="postgresql://postgres:postgres@localhost:5432/hsl_rover?schema=public"
 PORT=4000
 ROVER_MODE=SIMULATION
@@ -201,31 +226,16 @@ CLIENT_URL=http://localhost:5173
 JWT_SECRET=hsl-care-smart-rover-jwt-secret-key-2026
 ```
 
-> [!NOTE]
-> Adjust `DATABASE_URL` username and password to match your local PostgreSQL credentials if they differ from `postgres:postgres`.
-
----
-
-### 3. PostgreSQL Database Setup
-
-Ensure PostgreSQL is running, then create the database `hsl_rover`:
-
-**Using psql (terminal):**
+#### 2. Create the Database
 ```bash
+# Terminal (Linux / macOS / WSL):
 psql -U postgres -c "CREATE DATABASE hsl_rover;"
-```
 
-**Using PowerShell (Windows host):**
-```powershell
+# PowerShell (Windows Host):
 & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U postgres -c "CREATE DATABASE hsl_rover;"
 ```
 
----
-
-### 4. Dependency Installation
-
-Install dependencies across the root orchestrator, backend server, and frontend client:
-
+#### 3. Install Dependencies
 ```bash
 # 1. Root dependencies (concurrently)
 npm install
@@ -237,42 +247,16 @@ npm --prefix server install
 npm --prefix client install
 ```
 
----
-
-### 5. Database Schema & Deterministic Seed
-
-Push the Prisma schema to your PostgreSQL database and run the pre-configured demo seed:
-
+#### 4. Push Schema & Seed Demo Data
 ```bash
-# Push schema tables & generate Prisma Client
 npm run db:push
-
-# Seed facility rooms, staff accounts, Mary Johnson (Hero Resident), and Rover-01
 npm run db:seed
 ```
 
-You should see output confirming:
-- 🧹 Existing records cleaned
-- 👤 3 Staff accounts created (Admin, Nurse, Caregiver)
-- 📍 6 Facility locations seeded (Dock, Station, Med Room, Rooms 101, 102, 103)
-- 👥 3 Residents created (Mary Johnson in Room 102)
-- 🤖 Rover-01 initialized at Dock with 100% battery
-- 📋 Hero Task queued in `READY` status for immediate demo dispatch
-
----
-
-### 6. Launch Development Environment
-
-Run the backend server and frontend development server concurrently with a single command:
-
+#### 5. Launch Development Server
 ```bash
 npm run dev
 ```
-
-This starts:
-- 🚀 **Backend Server & WebSockets**: [http://localhost:4000](http://localhost:4000)
-- 💻 **Caregiver Web Portal**: [http://localhost:5173](http://localhost:5173)
-
 Open [http://localhost:5173](http://localhost:5173) in your browser.
 
 ---

@@ -12,6 +12,10 @@
     "db:push": "npm --prefix server run db:push",
     "db:seed": "npm --prefix server run db:seed",
     "db:studio": "npm --prefix server run db:studio",
+    "docker:up": "docker compose up --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:reset": "docker compose down -v && docker compose up --build",
     "release:phase": "node scripts/release-phase.js"
   },
   "devDependencies": {

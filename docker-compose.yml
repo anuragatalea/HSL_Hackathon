@@ -1,0 +1,77 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: hsl-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-hsl_rover}
+    ports:
+      # Maps to host port 5433 by default to avoid conflict with local host PostgreSQL on port 5432
+      - "${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d hsl_rover"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - hsl-network
+
+  server:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: hsl-server
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@postgres:5432/${POSTGRES_DB:-hsl_rover}?schema=public
+      PORT: 4000
+      ROVER_MODE: ${ROVER_MODE:-SIMULATION}
+      FAST_FORWARD_SECONDS: ${FAST_FORWARD_SECONDS:-10}
+      CLIENT_URL: http://localhost:5173
+      JWT_SECRET: ${JWT_SECRET:-hsl-care-smart-rover-jwt-secret-key-2026}
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server:/app
+      - server_node_modules:/app/node_modules
+    networks:
+      - hsl-network
+
+  client:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    container_name: hsl-client
+    restart: unless-stopped
+    depends_on:
+      server:
+        condition: service_started
+    environment:
+      BACKEND_URL: http://server:4000
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./client:/app
+      - client_node_modules:/app/node_modules
+    networks:
+      - hsl-network
+
+volumes:
+  postgres_data:
+    name: hsl_postgres_data
+  server_node_modules:
+    name: hsl_server_node_modules
+  client_node_modules:
+    name: hsl_client_node_modules
+
+networks:
+  hsl-network:
+    name: hsl_rover_network
+    driver: bridge
