@@ -36,6 +36,7 @@ services:
       FAST_FORWARD_SECONDS: ${FAST_FORWARD_SECONDS:-10}
       CLIENT_URL: http://localhost:5173
       JWT_SECRET: ${JWT_SECRET:-hsl-care-smart-rover-jwt-secret-key-2026}
+      ROVER_IP: ${ROVER_IP:-192.168.0.11}
     ports:
       - "4000:4000"
     volumes:
