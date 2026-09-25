@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { MetricsRow } from './MetricsRow.js';
 import { RoverHeroCard } from './RoverHeroCard.js';
+import { FacilityFloorplanSVG } from './FacilityFloorplanSVG.js';
 import { TasksTable } from './TasksTable.js';
 import { AssistanceAlertBanner } from './AssistanceAlertBanner.js';
 import { ScheduleModal } from './ScheduleModal.js';
@@ -83,12 +84,49 @@ export function Dashboard({ currentRole, isScheduleModalOpen, onCloseScheduleMod
       {/* Top 4 KPI Glass Cards */}
       <MetricsRow rover={rover} tasks={tasks} />
 
-      {/* Rover-01 Live Telemetry & Control Hero Card */}
-      <RoverHeroCard
-        rover={rover}
-        activeTask={activeTask}
-        onRefresh={fetchInitialData}
-      />
+      {/* 2-Column Operational Command Center: 2D Facility Tracking Map + Mission & Rover Controls */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: 'minmax(400px, 1.35fr) minmax(350px, 1fr)',
+        gap: '20px',
+        marginBottom: '24px',
+        alignItems: 'stretch'
+      }}>
+        {/* Left: 2D Interactive Facility Floorplan */}
+        <div style={{
+          background: 'rgba(15, 23, 42, 0.7)',
+          border: '1px solid var(--border-subtle)',
+          borderRadius: '16px',
+          padding: '16px',
+          display: 'flex',
+          flexDirection: 'column'
+        }}>
+          <div style={{
+            fontSize: '0.9rem',
+            fontWeight: 700,
+            color: 'hsl(210, 40%, 98%)',
+            marginBottom: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <span>🗺️ Facility Map & Rover Real-Time Tracking</span>
+            <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600 }}>13×20 ft Demo Grid</span>
+          </div>
+          <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+            <FacilityFloorplanSVG rover={rover} activeTask={activeTask} />
+          </div>
+        </div>
+
+        {/* Right: Active Mission & Rover Live Telemetry / Dispatch */}
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <RoverHeroCard
+            rover={rover}
+            activeTask={activeTask}
+            onRefresh={fetchInitialData}
+          />
+        </div>
+      </div>
 
       {/* Quick Jump Bar between Tasks Queue and Schedules */}
       <div style={{

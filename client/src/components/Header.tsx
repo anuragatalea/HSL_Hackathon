@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, ShieldCheck, UserCheck, Stethoscope, Radio, Wifi, WifiOff, Cpu, X, ChevronDown, LogOut } from 'lucide-react';
+import { Bot, ShieldCheck, UserCheck, Stethoscope, Radio, Wifi, WifiOff, X, ChevronDown, LogOut } from 'lucide-react';
 import { socket } from '../socket.js';
 import { useAuth } from '../context/AuthContext.js';
 
@@ -13,8 +13,8 @@ interface HardwareStatus {
 }
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'monitor' | 'schedules' | 'residents' | 'kiosk' | 'audit';
-  setActiveTab: (tab: 'dashboard' | 'monitor' | 'schedules' | 'residents' | 'kiosk' | 'audit') => void;
+  activeTab: 'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit';
+  setActiveTab: (tab: 'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit') => void;
   onOpenSchedule?: () => void;
   currentRole: string;
   setCurrentRole: (role: string) => void;
@@ -136,11 +136,10 @@ export function Header({
         gap: '4px'
       }}>
         {[
-          { id: 'dashboard', label: '📊 Dashboard' },
-          { id: 'monitor', label: '🗺️ 2D Floorplan' },
+          { id: 'dashboard', label: '📊 Live Operations' },
           { id: 'schedules', label: '📅 Schedules' },
-          { id: 'residents', label: '👥 Residents' },
-          { id: 'kiosk', label: '📱 Rover Kiosk' },
+          { id: 'residents', label: '👥 Residents & Care' },
+          { id: 'kiosk', label: '📱 Bedside Kiosk' },
           { id: 'audit', label: '📜 Audit Log' }
         ].map((tab) => {
           const isActive = activeTab === tab.id;
@@ -181,45 +180,28 @@ export function Header({
             borderRadius: '999px',
             cursor: 'pointer',
             transition: 'all 0.2s ease',
-            background:
-              hardwareStatus?.mode === 'HARDWARE'
-                ? hardwareStatus.isHardwareConnected
-                  ? 'rgba(16, 185, 129, 0.15)'
-                  : 'rgba(239, 68, 68, 0.15)'
-                : 'rgba(245, 158, 11, 0.15)',
+            background: hardwareStatus?.isHardwareConnected
+              ? 'rgba(16, 185, 129, 0.15)'
+              : 'rgba(239, 68, 68, 0.15)',
             border: `1px solid ${
-              hardwareStatus?.mode === 'HARDWARE'
-                ? hardwareStatus.isHardwareConnected
-                  ? 'rgba(16, 185, 129, 0.4)'
-                  : 'rgba(239, 68, 68, 0.4)'
-                : 'rgba(245, 158, 11, 0.35)'
+              hardwareStatus?.isHardwareConnected
+                ? 'rgba(16, 185, 129, 0.4)'
+                : 'rgba(239, 68, 68, 0.4)'
             }`,
             fontSize: '0.75rem',
             fontWeight: 600,
-            color:
-              hardwareStatus?.mode === 'HARDWARE'
-                ? hardwareStatus.isHardwareConnected
-                  ? '#34d399'
-                  : '#f87171'
-                : '#fbbf24'
+            color: hardwareStatus?.isHardwareConnected ? '#34d399' : '#f87171'
           }}
         >
-          {hardwareStatus?.mode === 'HARDWARE' ? (
-            hardwareStatus.isHardwareConnected ? (
-              <>
-                <Wifi size={14} className="animate-pulse" />
-                <span>UGV-Beast Online ({hardwareStatus.hardwareIp || 'Wi-Fi'})</span>
-              </>
-            ) : (
-              <>
-                <WifiOff size={14} />
-                <span>UGV-Beast Offline</span>
-              </>
-            )
+          {hardwareStatus?.isHardwareConnected ? (
+            <>
+              <Wifi size={14} className="animate-pulse" />
+              <span>UGV-Beast Online ({hardwareStatus.hardwareIp || 'Wi-Fi'})</span>
+            </>
           ) : (
             <>
-              <Cpu size={14} />
-              <span>Sim Mode (Virtual Twin)</span>
+              <WifiOff size={14} />
+              <span>UGV-Beast Offline</span>
             </>
           )}
         </button>

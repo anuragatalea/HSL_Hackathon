@@ -4,20 +4,16 @@ import { LoginPage } from './components/LoginPage.js';
 import { ResidentPortal } from './components/ResidentPortal.js';
 import { Header } from './components/Header.js';
 import { Dashboard } from './components/Dashboard.js';
-import { MissionMonitor } from './components/MissionMonitor.js';
 import { SchedulesManagement } from './components/SchedulesManagement.js';
 import { ResidentsManagement } from './components/ResidentsManagement.js';
 import { RoverKiosk } from './components/RoverKiosk.js';
 import { AuditLogViewer } from './components/AuditLogViewer.js';
-import { DemoToolbar } from './components/DemoToolbar.js';
-import { JudgeDemoModal } from './components/JudgeDemoModal.js';
 import { ScheduleModal } from './components/ScheduleModal.js';
 import { AuthModal } from './components/AuthModal.js';
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'monitor' | 'schedules' | 'residents' | 'kiosk' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit'>('dashboard');
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
-  const [isJudgeModalOpen, setIsJudgeModalOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState('Nurse Sarah Jenkins (RN-402)');
 
   const { sessionType, currentResident, logout, isAuthModalOpen, setIsAuthModalOpen, isLoading } = useAuth();
@@ -56,7 +52,7 @@ function AppContent() {
 
   // 3. Staff Portal: Full caregiver and administrative command center
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '70px' }}>
+    <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', paddingBottom: '24px' }}>
       {/* Top Application Header */}
       <Header
         activeTab={activeTab}
@@ -75,10 +71,6 @@ function AppContent() {
             onCloseScheduleModal={() => setIsScheduleModalOpen(false)}
             onNavigateToSchedules={() => setActiveTab('schedules')}
           />
-        )}
-
-        {activeTab === 'monitor' && (
-          <MissionMonitor currentRole={currentRole} />
         )}
 
         {activeTab === 'schedules' && (
@@ -110,21 +102,6 @@ function AppContent() {
         onClose={() => setIsScheduleModalOpen(false)}
         onSuccess={() => setIsScheduleModalOpen(false)}
         currentRole={currentRole}
-      />
-
-      {/* Presenter Floating Toolbar */}
-      <DemoToolbar
-        onOpenPitchModal={() => setIsJudgeModalOpen(true)}
-      />
-
-      {/* Judge Pitch Guide Modal */}
-      <JudgeDemoModal
-        isOpen={isJudgeModalOpen}
-        onClose={() => setIsJudgeModalOpen(false)}
-        onNavigateTab={(tab) => setActiveTab(tab)}
-        onTriggerHeroReset={() => {
-          fetch('/api/rover/demo/reset', { method: 'POST' }).catch(console.error);
-        }}
       />
 
       {/* Multi-role Staff Authentication & Quick Switcher Modal */}

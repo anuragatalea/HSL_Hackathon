@@ -211,7 +211,7 @@ export const SchedulesManagement: React.FC<SchedulesManagementProps> = ({
           style={{ padding: '10px 20px', fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}
         >
           <Plus size={18} />
-          <span>+ New Delivery Schedule</span>
+          <span>New Delivery Schedule</span>
         </button>
       </div>
 

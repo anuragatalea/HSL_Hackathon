@@ -1,7 +1,8 @@
 import { IRoverAdapter, RoverTelemetry, Waypoint } from './roverAdapter.js';
 import { prisma } from '../prisma.js';
 import { broadcast, getIO } from '../socket.js';
-import { RoverStatus } from '@prisma/client';
+import { RoverStatus, TaskStatus, ActorType } from '@prisma/client';
+import { transitionTask } from '../services/taskStateMachine.js';
 
 export class HardwareRoverAdapter implements IRoverAdapter {
   readonly mode = 'HARDWARE' as const;
@@ -16,6 +17,8 @@ export class HardwareRoverAdapter implements IRoverAdapter {
   private piSocketId: string | null = null;
   private piIp: string | null = null;
   private lastHeartbeat: Date | null = null;
+  private activeTaskId: string | null = null;
+  private targetRoomNumber: string | null = null;
 
   constructor() {
     this.initDatabaseRecord();
@@ -65,6 +68,34 @@ export class HardwareRoverAdapter implements IRoverAdapter {
           this.currentRoom = data.currentRoom !== undefined ? data.currentRoom : this.currentRoom;
 
           broadcast('rover:telemetry', await this.getTelemetry());
+
+          // Handle task arrival when physical robot reaches destination
+          if ((data.status === 'ARRIVED' || data.status === RoverStatus.ARRIVED) && this.activeTaskId) {
+            const taskId = this.activeTaskId;
+            const roomNumber = this.currentRoom || this.targetRoomNumber || '102';
+            this.activeTaskId = null;
+
+            broadcast('rover:arrived', { taskId, roomNumber });
+
+            try {
+              await transitionTask(
+                prisma,
+                taskId,
+                TaskStatus.ARRIVED,
+                { actorType: ActorType.ROVER, actorId: 'Rover-01' }
+              );
+              await transitionTask(
+                prisma,
+                taskId,
+                TaskStatus.AWAITING_CONFIRMATION,
+                { actorType: ActorType.SYSTEM, actorId: 'KioskScreen' }
+              );
+              broadcast('kiosk:greeting', { taskId, roomNumber });
+              console.log(`🎯 [Hardware Rover] Task ${taskId} advanced to ARRIVED & AWAITING_CONFIRMATION at Room ${roomNumber}!`);
+            } catch (err: any) {
+              console.warn('Hardware rover auto arrival task transition notice:', err.message);
+            }
+          }
 
           // Sync to database
           if (this.roverId) {
@@ -132,6 +163,34 @@ export class HardwareRoverAdapter implements IRoverAdapter {
   async dispatchToRoom(taskId: string, targetRoomNumber: string, targetCoords: Waypoint): Promise<void> {
     this.status = RoverStatus.MOVING;
     this.currentRoom = 'CORRIDOR';
+    this.activeTaskId = taskId;
+    this.targetRoomNumber = targetRoomNumber;
+
+    let residentData: any = {};
+    let medicationsData: any[] = [];
+
+    try {
+      const task = await prisma.roverTask.findUnique({
+        where: { id: taskId },
+        include: {
+          resident: true
+        }
+      });
+      if (task && task.resident) {
+        residentData = {
+          id: task.resident.id,
+          name: task.resident.name,
+          roomNumber: task.resident.roomNumber,
+          faceEmbeddings: task.resident.faceEmbeddings,
+          isEnrolled: task.resident.isEnrolled
+        };
+        if (Array.isArray(task.medications)) {
+          medicationsData = task.medications;
+        }
+      }
+    } catch (e) {
+      console.warn('HardwareRover: Could not load task resident metadata:', e);
+    }
 
     broadcast('rover:pi_command', {
       command: 'NAVIGATE',
@@ -139,14 +198,17 @@ export class HardwareRoverAdapter implements IRoverAdapter {
       targetRoom: targetRoomNumber,
       targetX: targetCoords.x,
       targetY: targetCoords.y,
-      speed: 0.25 // Safe 0.25m/s demo speed
+      speed: 0.25, // Safe 0.25m/s demo speed
+      resident: residentData,
+      medications: medicationsData
     });
 
-    console.log(`🤖 [Hardware Rover] Sent NAVIGATE command to UGV-Beast for Room ${targetRoomNumber}.`);
+    console.log(`🤖 [Hardware Rover] Sent NAVIGATE command to UGV-Beast for Room ${targetRoomNumber} (Task ${taskId}).`);
   }
 
   async returnToDock(): Promise<void> {
     this.status = RoverStatus.RETURNING;
+    this.activeTaskId = null;
 
     broadcast('rover:pi_command', {
       command: 'RETURN_TO_DOCK',

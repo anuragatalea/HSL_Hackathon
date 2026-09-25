@@ -10,7 +10,6 @@ import { devicesRouter } from './routes/devices.js';
 import { assistanceRouter } from './routes/assistance.js';
 import { auditRouter } from './routes/audit.js';
 import { locationsRouter } from './routes/locations.js';
-import { demoRouter } from './routes/demo.js';
 import { residentsRouter } from './routes/residents.js';
 import { activitiesRouter } from './routes/activities.js';
 import { healthLogsRouter } from './routes/healthLogs.js';
@@ -39,7 +38,7 @@ app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
     system: 'HSL Care Smart Rover API',
-    roverMode: process.env.ROVER_MODE || 'SIMULATION',
+    roverMode: process.env.ROVER_MODE || 'HARDWARE',
     timestamp: new Date().toISOString()
   });
 });
@@ -56,7 +55,6 @@ app.use('/api/rover/devices', devicesRouter);
 app.use('/api/rover/assistance', assistanceRouter);
 app.use('/api/rover/logs', auditRouter);
 app.use('/api/rover/locations', locationsRouter);
-app.use('/api/rover/demo', demoRouter);
 
 
 // Global Error Handler
