@@ -33,8 +33,17 @@ export function MissionMonitor({ currentRole }: MissionMonitorProps) {
   useEffect(() => {
     fetchData();
 
-    function onTelemetry(updatedRover: RoverDevice) {
-      setRover(prev => (prev?.id === updatedRover.id ? { ...prev, ...updatedRover } : updatedRover));
+    function onTelemetry(updatedRover: any) {
+      setRover(prev => {
+        const id = updatedRover.id || updatedRover.roverId || prev?.id;
+        const normalized = {
+          ...(prev || {}),
+          ...updatedRover,
+          id,
+          roverId: id
+        };
+        return normalized;
+      });
     }
 
     function onTaskUpdated(updatedTask: RoverTask) {
@@ -63,6 +72,8 @@ export function MissionMonitor({ currentRole }: MissionMonitorProps) {
     t => t.status === 'DISPATCHED' || t.status === 'EN_ROUTE' || t.status === 'ARRIVED' || t.status === 'AWAITING_CONFIRMATION'
   ) || tasks.find(t => t.resident?.roomNumber === '102') || tasks[0] || null;
 
+  const roverId = rover?.id || (rover as any)?.roverId;
+
   const handleDispatchHero = async () => {
     if (!activeTask) return;
     setLoading(true);
@@ -81,10 +92,10 @@ export function MissionMonitor({ currentRole }: MissionMonitorProps) {
   };
 
   const handleReturnToDock = async () => {
-    if (!rover) return;
+    if (!roverId) return;
     setLoading(true);
     try {
-      await fetch(`/api/rover/devices/${rover.id}/return-to-dock`, { method: 'POST' });
+      await fetch(`/api/rover/devices/${roverId}/return-to-dock`, { method: 'POST' });
       fetchData();
     } catch (e) {
       console.error(e);
@@ -94,10 +105,10 @@ export function MissionMonitor({ currentRole }: MissionMonitorProps) {
   };
 
   const handleEstop = async () => {
-    if (!rover) return;
+    if (!roverId) return;
     setLoading(true);
     try {
-      await fetch(`/api/rover/devices/${rover.id}/estop`, { method: 'POST' });
+      await fetch(`/api/rover/devices/${roverId}/estop`, { method: 'POST' });
       fetchData();
     } catch (e) {
       console.error(e);

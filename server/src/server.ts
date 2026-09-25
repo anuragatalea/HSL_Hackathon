@@ -15,6 +15,7 @@ import { activitiesRouter } from './routes/activities.js';
 import { healthLogsRouter } from './routes/healthLogs.js';
 import { mediaRouter } from './routes/media.js';
 import { authRouter } from './routes/auth.js';
+import { demoRouter } from './routes/demo.js';
 
 const app = express();
 const server = http.createServer(app);
@@ -55,6 +56,7 @@ app.use('/api/rover/devices', devicesRouter);
 app.use('/api/rover/assistance', assistanceRouter);
 app.use('/api/rover/logs', auditRouter);
 app.use('/api/rover/locations', locationsRouter);
+app.use('/api/rover/demo', demoRouter);
 
 
 // Global Error Handler

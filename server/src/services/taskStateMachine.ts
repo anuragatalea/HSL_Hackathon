@@ -5,7 +5,7 @@ export const VALID_TRANSITIONS: Record<TaskStatus, TaskStatus[]> = {
   [TaskStatus.SCHEDULED]: [TaskStatus.READY, TaskStatus.CANCELLED],
   [TaskStatus.READY]: [TaskStatus.ASSIGNED, TaskStatus.DISPATCHED, TaskStatus.CANCELLED],
   [TaskStatus.ASSIGNED]: [TaskStatus.DISPATCHED, TaskStatus.CANCELLED],
-  [TaskStatus.DISPATCHED]: [TaskStatus.EN_ROUTE, TaskStatus.FAILED, TaskStatus.CANCELLED],
+  [TaskStatus.DISPATCHED]: [TaskStatus.EN_ROUTE, TaskStatus.ARRIVED, TaskStatus.FAILED, TaskStatus.CANCELLED],
   [TaskStatus.EN_ROUTE]: [TaskStatus.ARRIVED, TaskStatus.FAILED, TaskStatus.CANCELLED],
   [TaskStatus.ARRIVED]: [TaskStatus.AWAITING_CONFIRMATION, TaskStatus.SNOOZED, TaskStatus.COMPLETED],
   [TaskStatus.AWAITING_CONFIRMATION]: [TaskStatus.COMPLETED, TaskStatus.SNOOZED, TaskStatus.CANCELLED],

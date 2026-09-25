@@ -185,6 +185,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
 
   async getTelemetry(): Promise<RoverTelemetry> {
     return {
+      id: this.roverId,
       roverId: this.roverId,
       name: this.name,
       status: this.isPiConnected ? this.status : RoverStatus.OFFLINE,
@@ -196,6 +197,28 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     };
   }
 
+  private sendPhysicalMotorCommand(left: number, right: number) {
+    // 1. Send via Waveshare socket.io namespace
+    if (this.waveshareJsonSocket?.connected) {
+      this.waveshareJsonSocket.emit('json', { T: 1, L: left, R: right });
+    }
+
+    // 2. Dual-redundancy: Send via Flask REST command endpoint
+    try {
+      const roverIp = process.env.ROVER_IP || '192.168.0.11';
+      const roverPort = process.env.ROVER_PORT || '5000';
+      const form = new URLSearchParams();
+      form.append('command', `base -c {"T":1,"L":${left},"R":${right}}`);
+      fetch(`http://${roverIp}:${roverPort}/send_command`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: form.toString()
+      }).catch(() => {});
+    } catch (e) {
+      // Non-blocking
+    }
+  }
+
   async emergencyStop(): Promise<void> {
     if (this.movementTimer) {
       clearInterval(this.movementTimer);
@@ -205,9 +228,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     this.status = RoverStatus.ESTOP;
 
     // Immediately kill motor speed on physical robot
-    if (this.waveshareJsonSocket?.connected) {
-      this.waveshareJsonSocket.emit('json', { T: 1, L: 0, R: 0 });
-    }
+    this.sendPhysicalMotorCommand(0, 0);
     broadcast('rover:pi_command', { command: 'ESTOP' });
 
     await this.syncToDatabase();
@@ -257,17 +278,28 @@ export class HardwareRoverAdapter implements IRoverAdapter {
       targetRoom: targetRoomNumber,
       targetX: targetCoords.x,
       targetY: targetCoords.y,
-      speed: 0.25,
+      speed: 0.35,
       resident: residentData,
       medications: medicationsData
     });
 
     console.log(`🤖 [Hardware Rover] Physical Mission Dispatch: Driving UGV-Beast to Room ${targetRoomNumber}...`);
 
-    // Command physical motors forward at safe demo speed
-    if (this.waveshareJsonSocket?.connected) {
-      this.waveshareJsonSocket.emit('json', { T: 1, L: 110, R: 110 });
+    // Transition task to EN_ROUTE immediately as motors engage
+    try {
+      const enrouteRes = await transitionTask(
+        prisma,
+        taskId,
+        TaskStatus.EN_ROUTE,
+        { actorType: ActorType.ROVER, actorId: 'Rover-01' }
+      );
+      broadcast('task:updated', enrouteRes.task);
+    } catch (e: any) {
+      console.warn('HardwareRover: EN_ROUTE transition notice:', e.message);
     }
+
+    // Command physical motors forward at safe demo speed (0.35 m/s)
+    this.sendPhysicalMotorCommand(0.35, 0.35);
 
     const startX = this.x;
     const startY = this.y;
@@ -291,9 +323,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
         }
 
         // Stop physical robot motors
-        if (this.waveshareJsonSocket?.connected) {
-          this.waveshareJsonSocket.emit('json', { T: 1, L: 0, R: 0 });
-        }
+        this.sendPhysicalMotorCommand(0, 0);
 
         // Flash headlights to signal arrival
         if (this.waveshareCtrlSocket?.connected) {
@@ -314,18 +344,21 @@ export class HardwareRoverAdapter implements IRoverAdapter {
 
         // Advance task to ARRIVED -> AWAITING_CONFIRMATION
         try {
-          await transitionTask(
+          const arrivedRes = await transitionTask(
             prisma,
             taskId,
             TaskStatus.ARRIVED,
             { actorType: ActorType.ROVER, actorId: 'Rover-01' }
           );
-          await transitionTask(
+          broadcast('task:updated', arrivedRes.task);
+
+          const confRes = await transitionTask(
             prisma,
             taskId,
             TaskStatus.AWAITING_CONFIRMATION,
             { actorType: ActorType.SYSTEM, actorId: 'KioskScreen' }
           );
+          broadcast('task:updated', confRes.task);
           broadcast('kiosk:greeting', { taskId, roomNumber: targetRoomNumber });
           console.log(`🎯 [Hardware Rover] Physical Arrival confirmed at Room ${targetRoomNumber}! Kiosk prompt opened.`);
         } catch (err: any) {
@@ -344,10 +377,8 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     this.status = RoverStatus.RETURNING;
     this.currentRoom = 'CORRIDOR';
 
-    // Reverse motors towards dock
-    if (this.waveshareJsonSocket?.connected) {
-      this.waveshareJsonSocket.emit('json', { T: 1, L: -110, R: -110 });
-    }
+    // Reverse motors towards dock at -0.35 m/s
+    this.sendPhysicalMotorCommand(-0.35, -0.35);
 
     broadcast('rover:pi_command', { command: 'RETURN_TO_DOCK', targetX: 10.0, targetY: 2.0 });
 
@@ -375,9 +406,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
         }
 
         // Stop physical robot motors
-        if (this.waveshareJsonSocket?.connected) {
-          this.waveshareJsonSocket.emit('json', { T: 1, L: 0, R: 0 });
-        }
+        this.sendPhysicalMotorCommand(0, 0);
 
         this.status = RoverStatus.IDLE;
         this.currentRoom = 'DOCK';

@@ -7,6 +7,7 @@ export interface Waypoint {
 }
 
 export interface RoverTelemetry {
+  id: string;
   roverId: string;
   name: string;
   status: RoverStatus;

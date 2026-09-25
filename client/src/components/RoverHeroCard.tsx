@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bot, MapPin, Gauge, ShieldAlert, RotateCcw, Zap, Video } from 'lucide-react';
+import { Bot, MapPin, Gauge, ShieldAlert, RotateCcw, Zap, Video, Navigation, Send, CheckCircle2, AlertCircle } from 'lucide-react';
 import { RoverDevice, RoverTask } from '../types.js';
 import { RoverCameraFeed } from './RoverCameraFeed.js';
 import { socket } from '../socket.js';
@@ -33,11 +33,13 @@ export function RoverHeroCard({ rover, activeTask, onRefresh }: RoverHeroCardPro
     };
   }, []);
 
+  const roverId = rover?.id || (rover as any)?.roverId;
+
   const handleReturnToDock = async () => {
-    if (!rover) return;
+    if (!roverId) return;
     setLoading(true);
     try {
-      await fetch(`/api/rover/devices/${rover.id}/return-to-dock`, { method: 'POST' });
+      await fetch(`/api/rover/devices/${roverId}/return-to-dock`, { method: 'POST' });
       onRefresh();
     } catch (e) {
       console.error(e);
@@ -47,13 +49,41 @@ export function RoverHeroCard({ rover, activeTask, onRefresh }: RoverHeroCardPro
   };
 
   const handleEstop = async () => {
-    if (!rover) return;
+    if (!roverId) return;
     setLoading(true);
     try {
-      await fetch(`/api/rover/devices/${rover.id}/estop`, { method: 'POST' });
+      await fetch(`/api/rover/devices/${roverId}/estop`, { method: 'POST' });
       onRefresh();
     } catch (e) {
       console.error(e);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const [commandFeedback, setCommandFeedback] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+  const [selectedRoom, setSelectedRoom] = useState('101');
+
+  const handleSendToRoom = async (roomNumber: string) => {
+    if (!roverId) return;
+    setLoading(true);
+    setCommandFeedback(null);
+    try {
+      const res = await fetch(`/api/rover/devices/${roverId}/send-to-room`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomNumber })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCommandFeedback({ type: 'success', message: data.message || `Rover dispatched to ${roomNumber}` });
+        onRefresh();
+        setTimeout(() => setCommandFeedback(null), 5000);
+      } else {
+        setCommandFeedback({ type: 'error', message: data.error || 'Failed to dispatch rover' });
+      }
+    } catch (e: any) {
+      setCommandFeedback({ type: 'error', message: e.message || 'Network error executing command' });
     } finally {
       setLoading(false);
     }
@@ -228,6 +258,255 @@ export function RoverHeroCard({ rover, activeTask, onRefresh }: RoverHeroCardPro
         </div>
       )}
 
+
+      {/* Navigation Command Center — Send Rover to Any Room */}
+      <div style={{
+        marginTop: '20px',
+        padding: '16px 20px',
+        background: 'rgba(15, 23, 42, 0.75)',
+        borderRadius: '14px',
+        border: '1px solid rgba(56, 189, 248, 0.3)',
+        boxShadow: '0 4px 20px rgba(0, 0, 0, 0.35)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px'
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '10px'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <Navigation size={18} color="#38bdf8" />
+            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#f8fafc', letterSpacing: '0.3px' }}>
+              🎮 Dispatch Rover Command
+            </span>
+            <span style={{ fontSize: '0.75rem', color: '#94a3b8' }}>
+              — Send to any room or station instantly
+            </span>
+          </div>
+
+          {commandFeedback && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              fontSize: '0.8rem',
+              fontWeight: 700,
+              padding: '4px 12px',
+              borderRadius: '8px',
+              background: commandFeedback.type === 'success' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+              border: `1px solid ${commandFeedback.type === 'success' ? '#10b981' : '#ef4444'}`,
+              color: commandFeedback.type === 'success' ? '#34d399' : '#f87171'
+            }}>
+              {commandFeedback.type === 'success' ? <CheckCircle2 size={14} /> : <AlertCircle size={14} />}
+              <span>{commandFeedback.message}</span>
+            </div>
+          )}
+        </div>
+
+        {/* 5 Quick One-Click Dispatch Buttons */}
+        <div style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: '10px'
+        }}>
+          {/* Room 101 */}
+          <button
+            onClick={() => handleSendToRoom('101')}
+            disabled={loading || isMoving}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '3px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: rover?.currentRoom === '101' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.7)',
+              border: rover?.currentRoom === '101' ? '1px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.2)',
+              color: '#ffffff',
+              cursor: loading || isMoving ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>🛏️ Room 101</span>
+              {rover?.currentRoom === '101' && (
+                <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 800 }}>HERE</span>
+              )}
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Robert Davis</span>
+          </button>
+
+          {/* Room 102 */}
+          <button
+            onClick={() => handleSendToRoom('102')}
+            disabled={loading || isMoving}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '3px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: rover?.currentRoom === '102' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.7)',
+              border: rover?.currentRoom === '102' ? '1px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.2)',
+              color: '#ffffff',
+              cursor: loading || isMoving ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>🛏️ Room 102</span>
+              {rover?.currentRoom === '102' && (
+                <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 800 }}>HERE</span>
+              )}
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#df8b75' }}>Mary Johnson</span>
+          </button>
+
+          {/* Nurse Station */}
+          <button
+            onClick={() => handleSendToRoom('STATION')}
+            disabled={loading || isMoving}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '3px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: rover?.currentRoom === 'STATION' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.7)',
+              border: rover?.currentRoom === 'STATION' ? '1px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.2)',
+              color: '#ffffff',
+              cursor: loading || isMoving ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>👩‍⚕️ Nurse Station</span>
+              {rover?.currentRoom === 'STATION' && (
+                <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 800 }}>HERE</span>
+              )}
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Caregiver Desk</span>
+          </button>
+
+          {/* Medical Store */}
+          <button
+            onClick={() => handleSendToRoom('MED_ROOM')}
+            disabled={loading || isMoving}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '3px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: rover?.currentRoom === 'MED_ROOM' ? 'rgba(56, 189, 248, 0.25)' : 'rgba(30, 41, 59, 0.7)',
+              border: rover?.currentRoom === 'MED_ROOM' ? '1px solid #38bdf8' : '1px solid rgba(56, 189, 248, 0.2)',
+              color: '#ffffff',
+              cursor: loading || isMoving ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>💊 Medical Store</span>
+              {rover?.currentRoom === 'MED_ROOM' && (
+                <span style={{ fontSize: '0.65rem', color: '#38bdf8', fontWeight: 800 }}>HERE</span>
+              )}
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#94a3b8' }}>Pharmacy Shelf</span>
+          </button>
+
+          {/* Charging Station */}
+          <button
+            onClick={() => handleSendToRoom('DOCK')}
+            disabled={loading || isMoving || rover?.status === 'IDLE' || rover?.currentRoom === 'DOCK'}
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'flex-start',
+              gap: '3px',
+              padding: '10px 14px',
+              borderRadius: '10px',
+              background: rover?.currentRoom === 'DOCK' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(30, 41, 59, 0.7)',
+              border: rover?.currentRoom === 'DOCK' ? '1px solid #f59e0b' : '1px solid rgba(245, 158, 11, 0.3)',
+              color: '#ffffff',
+              cursor: loading || isMoving || rover?.status === 'IDLE' || rover?.currentRoom === 'DOCK' ? 'not-allowed' : 'pointer',
+              transition: 'all 0.2s ease',
+              textAlign: 'left'
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+              <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>⚡ Charging Dock</span>
+              {rover?.currentRoom === 'DOCK' && (
+                <span style={{ fontSize: '0.65rem', color: '#f59e0b', fontWeight: 800 }}>DOCKED</span>
+              )}
+            </div>
+            <span style={{ fontSize: '0.72rem', color: '#f59e0b' }}>Hazard Pad</span>
+          </button>
+        </div>
+
+        {/* Custom Room Selector & Send Button */}
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '10px',
+          paddingTop: '8px',
+          borderTop: '1px solid rgba(255, 255, 255, 0.08)'
+        }}>
+          <span style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+            Or select destination:
+          </span>
+          <select
+            value={selectedRoom}
+            onChange={(e) => setSelectedRoom(e.target.value)}
+            disabled={loading || isMoving}
+            style={{
+              background: 'rgba(15, 23, 42, 0.9)',
+              border: '1px solid rgba(56, 189, 248, 0.3)',
+              color: '#ffffff',
+              padding: '6px 12px',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 600
+            }}
+          >
+            <option value="101">Room 101 — Robert Davis</option>
+            <option value="102">Room 102 — Mary Johnson</option>
+            <option value="103">Room 103 — Eleanor Vance</option>
+            <option value="STATION">Nurse Station (Caregiver Desk)</option>
+            <option value="MED_ROOM">Medical Store (Supplies)</option>
+            <option value="DOCK">Charging Station (Dock)</option>
+          </select>
+
+          <button
+            onClick={() => handleSendToRoom(selectedRoom)}
+            disabled={loading || isMoving}
+            className="btn btn-primary"
+            style={{
+              padding: '6px 14px',
+              fontSize: '0.82rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              borderRadius: '8px',
+              background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+              fontWeight: 700
+            }}
+          >
+            <Send size={13} />
+            <span>{loading ? 'Transmitting...' : 'Send Rover'}</span>
+          </button>
+        </div>
+      </div>
 
       {/* Active Mission Banner (if executing a delivery) */}
       {activeTask && (

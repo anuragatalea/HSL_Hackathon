@@ -44,8 +44,17 @@ export function Dashboard({ currentRole, isScheduleModalOpen, onCloseScheduleMod
     fetchInitialData();
 
     // Real-time Socket.io listeners
-    function onRoverTelemetry(updatedRover: RoverDevice) {
-      setRover(prev => (prev?.id === updatedRover.id ? { ...prev, ...updatedRover } : updatedRover));
+    function onRoverTelemetry(updatedRover: any) {
+      setRover(prev => {
+        const id = updatedRover.id || updatedRover.roverId || prev?.id;
+        const normalized = {
+          ...(prev || {}),
+          ...updatedRover,
+          id,
+          roverId: id
+        };
+        return normalized;
+      });
     }
 
     function onTaskUpdated(updatedTask: RoverTask) {
@@ -75,6 +84,39 @@ export function Dashboard({ currentRole, isScheduleModalOpen, onCloseScheduleMod
   const activeTask = tasks.find(
     t => t.status === 'DISPATCHED' || t.status === 'EN_ROUTE' || t.status === 'ARRIVED' || t.status === 'AWAITING_CONFIRMATION'
   ) || null;
+
+  const [mapNotice, setMapNotice] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const handleSendRoverToRoom = async (roomNumber: string) => {
+    const roverId = rover?.id || (rover as any)?.roverId;
+    if (!roverId) {
+      alert('Rover is currently connecting, please wait a moment.');
+      return;
+    }
+    const label = roomNumber === 'STATION' ? 'Nurse Station' : roomNumber === 'MED_ROOM' ? 'Medical Store' : roomNumber === 'DOCK' ? 'Charging Dock' : `Room ${roomNumber}`;
+    setMapNotice({ message: `🚀 Command Received: Dispatching Rover to ${label}...`, type: 'info' });
+
+    try {
+      const res = await fetch(`/api/rover/devices/${roverId}/send-to-room`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomNumber })
+      });
+      const data = await res.json();
+      if (data.success) {
+        setMapNotice({ message: `✅ ${data.message || `Rover dispatched to ${label}!`}`, type: 'success' });
+        fetchInitialData();
+        setTimeout(() => setMapNotice(null), 6000);
+      } else {
+        setMapNotice({ message: `❌ ${data.error || 'Failed to dispatch command'}`, type: 'error' });
+        setTimeout(() => setMapNotice(null), 6000);
+      }
+    } catch (e: any) {
+      console.error('Failed to send rover to room:', e);
+      setMapNotice({ message: `❌ Network error: ${e.message}`, type: 'error' });
+      setTimeout(() => setMapNotice(null), 6000);
+    }
+  };
 
   return (
     <div>
@@ -108,13 +150,44 @@ export function Dashboard({ currentRole, isScheduleModalOpen, onCloseScheduleMod
             marginBottom: '12px',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'space-between'
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '8px'
           }}>
-            <span>🗺️ Facility Map & Rover Real-Time Tracking</span>
-            <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600 }}>13×20 ft Demo Grid</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span>🗺️ Facility Map & Rover Real-Time Tracking</span>
+              <span style={{
+                fontSize: '0.72rem',
+                color: '#34d399',
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                padding: '2px 8px',
+                borderRadius: '6px',
+                fontWeight: 700
+              }}>
+                👉 Click any room to send rover
+              </span>
+            </div>
+            <span style={{ fontSize: '0.75rem', color: '#38bdf8', fontWeight: 600 }}>11.5×18 ft Prototype Layout</span>
           </div>
+
+          {mapNotice && (
+            <div style={{
+              marginBottom: '10px',
+              padding: '8px 14px',
+              borderRadius: '8px',
+              fontSize: '0.82rem',
+              fontWeight: 700,
+              background: mapNotice.type === 'success' ? 'rgba(16, 185, 129, 0.18)' : mapNotice.type === 'error' ? 'rgba(239, 68, 68, 0.18)' : 'rgba(56, 189, 248, 0.18)',
+              border: `1px solid ${mapNotice.type === 'success' ? '#10b981' : mapNotice.type === 'error' ? '#ef4444' : '#38bdf8'}`,
+              color: mapNotice.type === 'success' ? '#34d399' : mapNotice.type === 'error' ? '#f87171' : '#38bdf8',
+              animation: 'fadeIn 0.2s ease-in-out'
+            }}>
+              {mapNotice.message}
+            </div>
+          )}
           <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-            <FacilityFloorplanSVG rover={rover} activeTask={activeTask} />
+            <FacilityFloorplanSVG rover={rover} activeTask={activeTask} onSendToRoom={handleSendRoverToRoom} />
           </div>
         </div>
 

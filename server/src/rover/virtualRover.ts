@@ -38,6 +38,7 @@ export class VirtualRoverAdapter implements IRoverAdapter {
 
   async getTelemetry(): Promise<RoverTelemetry> {
     return {
+      id: this.roverId,
       roverId: this.roverId,
       name: this.name,
       status: this.status,

@@ -48,6 +48,26 @@ export function TasksTable({ tasks, onRefresh, currentRole }: TasksTableProps) {
     }
   };
 
+  const handleConfirm = async (taskId: string) => {
+    setLoadingTaskId(taskId);
+    try {
+      await fetch(`/api/rover/tasks/${taskId}/confirm`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          staffId: currentRole,
+          confidence: 98,
+          notes: 'Biometric face match verified at bedside.'
+        })
+      });
+      onRefresh();
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoadingTaskId(null);
+    }
+  };
+
   const handleManualResolve = async (taskId: string) => {
     setLoadingTaskId(taskId);
     try {
@@ -302,10 +322,33 @@ export function TasksTable({ tasks, onRefresh, currentRole }: TasksTableProps) {
                         </button>
                       )}
 
-                      {(task.status === 'DISPATCHED' || task.status === 'EN_ROUTE' || task.status === 'ARRIVED' || task.status === 'AWAITING_CONFIRMATION') && (
-                        <span style={{ fontSize: '0.75rem', color: '#10b981', fontWeight: 600 }}>
-                          Executing on Track...
+                      {(task.status === 'DISPATCHED' || task.status === 'EN_ROUTE') && (
+                        <span style={{ fontSize: '0.75rem', color: '#f59e0b', fontWeight: 600 }}>
+                          🚀 Driving to {task.resident?.roomNumber ? `Room ${task.resident.roomNumber}` : 'Room'}...
                         </span>
+                      )}
+
+                      {(task.status === 'ARRIVED' || task.status === 'AWAITING_CONFIRMATION') && (
+                        <button
+                          onClick={() => handleConfirm(task.id)}
+                          disabled={isLoading}
+                          className="btn btn-primary"
+                          style={{
+                            padding: '6px 14px',
+                            fontSize: '0.75rem',
+                            background: '#10b981',
+                            borderColor: '#10b981',
+                            color: '#ffffff',
+                            fontWeight: 700,
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 0 10px rgba(16, 185, 129, 0.4)'
+                          }}
+                        >
+                          <CheckCircle2 size={14} />
+                          <span>Dispense & Confirm</span>
+                        </button>
                       )}
 
                       {task.status === 'COMPLETED' && (

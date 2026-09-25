@@ -54,6 +54,7 @@ export interface Room {
 
 export interface RoverDevice {
   id: string;
+  roverId?: string;
   name: string;
   status: RoverStatus;
   batteryLevel: number;

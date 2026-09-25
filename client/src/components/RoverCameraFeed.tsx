@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Maximize2, Minimize2, Video, Sparkles, Globe, Download, Settings, ShieldCheck } from 'lucide-react';
+import { Maximize2, Minimize2, Video, Globe, Download, Settings, ShieldCheck } from 'lucide-react';
 import { RoverDevice, RoverTask } from '../types.js';
 
 interface RoverCameraFeedProps {
@@ -34,9 +34,11 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
   const gridOffsetRef = useRef<number>(0);
 
   // Fetch camera config from backend
+  const roverId = rover?.id || (rover as any)?.roverId;
+
   useEffect(() => {
-    if (!rover?.id) return;
-    fetch(`/api/rover/devices/${rover.id}/camera`)
+    if (!roverId) return;
+    fetch(`/api/rover/devices/${roverId}/camera`)
       .then(res => res.json())
       .then(json => {
         if (json.success && json.data?.streamUrl) {
@@ -45,7 +47,7 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
         }
       })
       .catch(console.error);
-  }, [rover?.id]);
+  }, [roverId]);
 
   // Handle local webcam stream
   useEffect(() => {
@@ -313,8 +315,8 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
     setStreamUrl(tempUrl);
     setIsSettingsOpen(false);
     setHardwareError(false);
-    if (rover?.id) {
-      fetch(`/api/rover/devices/${rover.id}/camera`, {
+    if (roverId) {
+      fetch(`/api/rover/devices/${roverId}/camera`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ streamUrl: tempUrl })
