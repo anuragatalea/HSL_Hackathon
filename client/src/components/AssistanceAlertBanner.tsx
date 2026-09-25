@@ -38,44 +38,76 @@ export function AssistanceAlertBanner() {
 
   if (!activeAlert) return null;
 
+  const isRoverDispatched = activeAlert.roverDispatched === true;
+
   return (
     <div style={{
-      background: 'linear-gradient(135deg, rgba(239, 68, 68, 0.2) 0%, rgba(185, 28, 28, 0.25) 100%)',
-      border: '1px solid rgba(239, 68, 68, 0.5)',
-      borderRadius: '12px',
+      background: isRoverDispatched
+        ? 'linear-gradient(135deg, rgba(14, 165, 233, 0.18) 0%, rgba(2, 132, 199, 0.25) 100%)'
+        : 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.3) 100%)',
+      border: `1px solid ${isRoverDispatched ? 'rgba(56, 189, 248, 0.6)' : 'rgba(239, 68, 68, 0.6)'}`,
+      borderRadius: '14px',
       padding: '16px 24px',
       marginBottom: '24px',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'space-between',
-      boxShadow: '0 0 30px rgba(239, 68, 68, 0.25)',
-      animation: 'pulse-glow 2s infinite ease-in-out'
+      boxShadow: isRoverDispatched
+        ? '0 0 25px rgba(56, 189, 248, 0.2)'
+        : '0 0 35px rgba(239, 68, 68, 0.3)',
+      animation: isRoverDispatched ? 'none' : 'pulse-glow 1.8s infinite ease-in-out'
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
         <div style={{
-          width: '42px',
-          height: '42px',
-          borderRadius: '10px',
-          background: '#ef4444',
+          width: '44px',
+          height: '44px',
+          borderRadius: '12px',
+          background: isRoverDispatched ? '#0284c7' : '#ef4444',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          boxShadow: '0 0 15px rgba(239, 68, 68, 0.5)'
+          boxShadow: isRoverDispatched ? '0 0 15px rgba(56, 189, 248, 0.5)' : '0 0 15px rgba(239, 68, 68, 0.6)'
         }}>
-          <BellRing size={22} color="#ffffff" className="animate-bounce" />
+          <BellRing size={22} color="#ffffff" className={isRoverDispatched ? '' : 'animate-bounce'} />
         </div>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <span style={{ fontSize: '0.95rem', fontWeight: 800, color: '#fca5a5', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-              Urgent Resident Assistance Call
+            <span style={{
+              fontSize: '0.95rem',
+              fontWeight: 800,
+              color: isRoverDispatched ? '#7dd3fc' : '#fca5a5',
+              textTransform: 'uppercase',
+              letterSpacing: '0.04em'
+            }}>
+              {isRoverDispatched
+                ? `Room ${activeAlert.roomId} Assistance Call — Rover-01 Dispatched`
+                : `🚨 Urgent: Rover Busy — Nurse Response Required!`}
             </span>
-            <span style={{ fontSize: '0.75rem', padding: '2px 8px', borderRadius: '999px', background: '#ef4444', color: '#ffffff', fontWeight: 700 }}>
-              Live Alert
+            <span style={{
+              fontSize: '0.72rem',
+              padding: '2px 8px',
+              borderRadius: '999px',
+              background: isRoverDispatched ? 'rgba(56, 189, 248, 0.3)' : '#ef4444',
+              color: isRoverDispatched ? '#38bdf8' : '#ffffff',
+              fontWeight: 700,
+              border: isRoverDispatched ? '1px solid rgba(56, 189, 248, 0.5)' : 'none'
+            }}>
+              {isRoverDispatched ? 'Autonomous First Responder' : 'High Priority Staff Escalation'}
             </span>
           </div>
-          <p style={{ fontSize: '0.85rem', color: '#fecaca', margin: '4px 0 0 0' }}>
-            <strong>{activeAlert.resident?.name || 'Resident'}</strong> in Room {activeAlert.roomId} has requested caregiver help from Rover-01.
-            {activeAlert.notes && <span style={{ opacity: 0.85 }}> ({activeAlert.notes})</span>}
+          <p style={{ fontSize: '0.85rem', color: isRoverDispatched ? '#e0f2fe' : '#fecaca', margin: '4px 0 0 0' }}>
+            {isRoverDispatched ? (
+              <>
+                <strong>{activeAlert.resident?.name || 'Resident'}</strong> in Room {activeAlert.roomId} called for help. 
+                Rover-01 is actively navigating to the room to provide visual check-in and audio presence.
+              </>
+            ) : (
+              <>
+                <strong>{activeAlert.resident?.name || 'Resident'}</strong> in Room {activeAlert.roomId} requested assistance! 
+                <span style={{ fontWeight: 700, color: '#fef08a' }}> {activeAlert.busyReason || 'Rover is busy with another patient'}</span>. 
+                Physical nurse response is required immediately!
+              </>
+            )}
           </p>
         </div>
       </div>
@@ -93,7 +125,7 @@ export function AssistanceAlertBanner() {
           }}
         >
           <CheckCircle size={16} />
-          <span>Acknowledge & Attend</span>
+          <span>{isRoverDispatched ? 'Acknowledge Mission' : 'Acknowledge & Respond'}</span>
         </button>
         <button
           onClick={() => setActiveAlert(null)}

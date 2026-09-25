@@ -8,8 +8,14 @@ interface ResidentPortalProps {
   onLogout: () => void;
 }
 
+interface AssistanceFeedback {
+  type: 'ROVER_DISPATCHED' | 'NURSE_ALERTED' | 'ACKNOWLEDGED' | 'ALREADY_ACTIVE';
+  title: string;
+  description: string;
+}
+
 export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
-  const [assistanceStatus, setAssistanceStatus] = useState<string | null>(null);
+  const [assistanceFeedback, setAssistanceFeedback] = useState<AssistanceFeedback | null>(null);
   const [isCalling, setIsCalling] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
 
@@ -20,14 +26,51 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
     return () => clearInterval(timer);
   }, []);
 
+  // Fetch initial active assistance status on mount so refreshes don't lose status
+  useEffect(() => {
+    fetch('/api/rover/assistance')
+      .then(res => res.json())
+      .then(data => {
+        if (data.success && Array.isArray(data.data)) {
+          const active = data.data.find((a: any) => a.residentId === resident.id && (a.status === 'PENDING' || a.status === 'ACKNOWLEDGED'));
+          if (active) {
+            if (active.status === 'ACKNOWLEDGED') {
+              setAssistanceFeedback({
+                type: 'ACKNOWLEDGED',
+                title: '👩‍⚕️ Caregiver Acknowledged',
+                description: 'A caregiver has acknowledged your call and is responding to your room.'
+              });
+            } else if (active.roverDispatched) {
+              setAssistanceFeedback({
+                type: 'ROVER_DISPATCHED',
+                title: `🤖 Rover-01 Dispatched to Room ${resident.roomNumber}`,
+                description: 'Rover-01 has been dispatched autonomously to your room as rapid first responder.'
+              });
+            } else {
+              setAssistanceFeedback({
+                type: 'NURSE_ALERTED',
+                title: `👩‍⚕️ Nurse Staff Alerted Urgently`,
+                description: 'Rover is currently assisting another resident. A caregiver nurse is heading to your room!'
+              });
+            }
+          }
+        }
+      })
+      .catch(err => console.error('Failed to fetch existing assistance:', err));
+  }, [resident.id, resident.roomNumber]);
+
   // Listen for assistance acknowledgement via socket
   useEffect(() => {
     function onAssistanceUpdate(data: any) {
       if (data?.residentId === resident.id) {
         if (data.status === 'ACKNOWLEDGED') {
-          setAssistanceStatus('A caregiver has acknowledged your call and is responding!');
+          setAssistanceFeedback({
+            type: 'ACKNOWLEDGED',
+            title: '👩‍⚕️ Caregiver Acknowledged',
+            description: 'A caregiver has acknowledged your call and is responding to your room!'
+          });
         } else if (data.status === 'RESOLVED') {
-          setAssistanceStatus(null);
+          setAssistanceFeedback(null);
         }
       }
     }
@@ -56,7 +99,25 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
       });
       const data = await res.json();
       if (data.success) {
-        setAssistanceStatus('Call Sent! Rover & Caregivers alerted.');
+        if (data.alreadyActive) {
+          setAssistanceFeedback({
+            type: 'ALREADY_ACTIVE',
+            title: 'Call Already Active',
+            description: data.message || `An assistance request is already active for Room ${resident.roomNumber}. Our team is responding!`
+          });
+        } else if (data.roverDispatched) {
+          setAssistanceFeedback({
+            type: 'ROVER_DISPATCHED',
+            title: `🤖 Rover-01 Dispatched to Room ${resident.roomNumber}`,
+            description: data.message || `Rover-01 has been dispatched to Room ${resident.roomNumber} as first-responder.`
+          });
+        } else {
+          setAssistanceFeedback({
+            type: 'NURSE_ALERTED',
+            title: `👩‍⚕️ Nurse Staff Alerted Urgently`,
+            description: data.message || `Rover is currently assisting another resident. A caregiver nurse is heading to Room ${resident.roomNumber} now!`
+          });
+        }
       }
     } catch (err) {
       console.error('Assistance call error:', err);
@@ -165,48 +226,95 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
       {/* Main Tablet Content */}
       <main style={{ flex: 1, padding: '32px', maxWidth: '1200px', margin: '0 auto', width: '100%' }}>
         {/* Assistance Alert Status Banner */}
-        {assistanceStatus && (
+        {assistanceFeedback && (
           <div style={{
-            background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
-            border: '2px solid #10b981',
+            background: assistanceFeedback.type === 'ROVER_DISPATCHED'
+              ? 'linear-gradient(135deg, rgba(6, 182, 212, 0.2) 0%, rgba(14, 165, 233, 0.2) 100%)'
+              : assistanceFeedback.type === 'NURSE_ALERTED'
+                ? 'linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(185, 28, 28, 0.25) 100%)'
+                : assistanceFeedback.type === 'ACKNOWLEDGED'
+                  ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)'
+                  : 'linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(217, 119, 6, 0.2) 100%)',
+            border: `2px solid ${
+              assistanceFeedback.type === 'ROVER_DISPATCHED' ? '#06b6d4' :
+              assistanceFeedback.type === 'NURSE_ALERTED' ? '#ef4444' :
+              assistanceFeedback.type === 'ACKNOWLEDGED' ? '#10b981' : '#f59e0b'
+            }`,
             borderRadius: '16px',
             padding: '18px 24px',
             marginBottom: '28px',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            boxShadow: '0 0 25px rgba(16, 185, 129, 0.3)'
+            boxShadow: `0 0 25px ${
+              assistanceFeedback.type === 'ROVER_DISPATCHED' ? 'rgba(6, 182, 212, 0.35)' :
+              assistanceFeedback.type === 'NURSE_ALERTED' ? 'rgba(239, 68, 68, 0.4)' :
+              assistanceFeedback.type === 'ACKNOWLEDGED' ? 'rgba(16, 185, 129, 0.3)' : 'rgba(245, 158, 11, 0.3)'
+            }`
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
               <div style={{
-                background: '#10b981',
-                padding: '8px',
+                background: assistanceFeedback.type === 'ROVER_DISPATCHED' ? '#06b6d4' :
+                  assistanceFeedback.type === 'NURSE_ALERTED' ? '#ef4444' :
+                  assistanceFeedback.type === 'ACKNOWLEDGED' ? '#10b981' : '#f59e0b',
+                padding: '10px',
                 borderRadius: '50%',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                color: '#ffffff'
               }}>
-                <CheckCircle2 size={24} color="#064e3b" />
+                {assistanceFeedback.type === 'ROVER_DISPATCHED' ? (
+                  <Bot size={26} />
+                ) : assistanceFeedback.type === 'NURSE_ALERTED' ? (
+                  <BellRing size={26} />
+                ) : (
+                  <CheckCircle2 size={26} />
+                )}
               </div>
               <div>
-                <h3 style={{ margin: 0, fontSize: '1.1rem', fontWeight: 800, color: '#ffffff' }}>
-                  {assistanceStatus}
-                </h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.85rem', color: '#a7f3d0' }}>
-                  A caregiver and Smart Rover have received your notification and are on the way.
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                  <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800, color: '#ffffff' }}>
+                    {assistanceFeedback.title}
+                  </h3>
+                  <span style={{
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '2px 8px',
+                    borderRadius: '999px',
+                    background: assistanceFeedback.type === 'ROVER_DISPATCHED' ? 'rgba(6, 182, 212, 0.25)' :
+                      assistanceFeedback.type === 'NURSE_ALERTED' ? 'rgba(239, 68, 68, 0.3)' :
+                      assistanceFeedback.type === 'ACKNOWLEDGED' ? 'rgba(16, 185, 129, 0.25)' : 'rgba(245, 158, 11, 0.25)',
+                    color: assistanceFeedback.type === 'ROVER_DISPATCHED' ? '#38bdf8' :
+                      assistanceFeedback.type === 'NURSE_ALERTED' ? '#fca5a5' :
+                      assistanceFeedback.type === 'ACKNOWLEDGED' ? '#6ee7b7' : '#fcd34d',
+                    border: `1px solid ${
+                      assistanceFeedback.type === 'ROVER_DISPATCHED' ? '#06b6d4' :
+                      assistanceFeedback.type === 'NURSE_ALERTED' ? '#ef4444' :
+                      assistanceFeedback.type === 'ACKNOWLEDGED' ? '#10b981' : '#f59e0b'
+                    }`
+                  }}>
+                    {assistanceFeedback.type === 'ROVER_DISPATCHED' ? 'Autonomous First Responder' :
+                     assistanceFeedback.type === 'NURSE_ALERTED' ? 'Urgent Nurse Response' :
+                     assistanceFeedback.type === 'ACKNOWLEDGED' ? 'Nurse Responding' : 'Active'}
+                  </span>
+                </div>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.875rem', color: 'hsl(215, 20%, 80%)' }}>
+                  {assistanceFeedback.description}
                 </p>
               </div>
             </div>
             <button
-              onClick={() => setAssistanceStatus(null)}
+              onClick={() => setAssistanceFeedback(null)}
               style={{
                 background: 'rgba(255, 255, 255, 0.1)',
-                border: 'none',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
                 color: '#ffffff',
-                padding: '6px 12px',
-                borderRadius: '6px',
+                padding: '6px 14px',
+                borderRadius: '8px',
                 fontSize: '0.75rem',
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontWeight: 600
               }}
             >
               Dismiss
@@ -345,7 +453,11 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
                 padding: '20px',
                 borderRadius: '16px',
                 border: 'none',
-                background: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
+                background: assistanceFeedback?.type === 'ROVER_DISPATCHED'
+                  ? 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)'
+                  : assistanceFeedback?.type === 'NURSE_ALERTED'
+                    ? 'linear-gradient(135deg, #dc2626 0%, #991b1b 100%)'
+                    : 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
                 color: '#ffffff',
                 fontSize: '1.1rem',
                 fontWeight: 900,
@@ -354,13 +466,21 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '12px',
-                boxShadow: '0 8px 25px rgba(239, 68, 68, 0.45)',
-                transition: 'transform 0.15s ease',
+                boxShadow: assistanceFeedback?.type === 'ROVER_DISPATCHED'
+                  ? '0 8px 25px rgba(2, 132, 199, 0.45)'
+                  : '0 8px 25px rgba(239, 68, 68, 0.45)',
+                transition: 'all 0.2s ease',
                 opacity: isCalling ? 0.7 : 1
               }}
             >
               <PhoneCall size={26} />
-              <span>{isCalling ? 'Sending Alert...' : 'Call Caregiver to Room 102'}</span>
+              <span>
+                {isCalling
+                  ? 'Sending Alert...'
+                  : assistanceFeedback
+                    ? `Assistance Active for Room ${resident.roomNumber}`
+                    : `Call Caregiver to Room ${resident.roomNumber}`}
+              </span>
             </button>
           </div>
         </div>

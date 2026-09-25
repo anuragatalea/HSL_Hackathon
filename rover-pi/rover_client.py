@@ -37,6 +37,17 @@ ROVER_STATE = {
     "currentRoom": "DOCK"
 }
 
+def speak(text: str):
+    """Speaks text through the Raspberry Pi onboard speaker / audio output."""
+    print(f"🗣️ [UGV-Beast Speaker]: \"{text}\"")
+    for cmd in ['espeak-ng', 'espeak']:
+        try:
+            import subprocess
+            subprocess.Popen([cmd, '-s', '140', '-a', '100', text], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            return
+        except Exception:
+            continue
+
 @sio.event
 def connect():
     print(f"🔗 Connected to ALEA Care Backend Server: {SERVER_URL}")
@@ -63,8 +74,15 @@ def on_rover_command(data):
         resident_info = data.get('resident', {})
         medications = data.get('medications', [])
         resident_name = resident_info.get('name', 'Resident')
+        cmd_type = data.get('type', 'DELIVERY')
 
-        print(f"🚀 [UGV-Beast] Mission Dispatch: Delivering to {resident_name} (Room {target_room})")
+        if cmd_type == 'ASSISTANCE':
+            print(f"🚨 [UGV-Beast] EMERGENCY ASSISTANCE CALL: Room {target_room} for {resident_name}!")
+            speak(f"Emergency assistance call from Room {target_room}! Navigating immediately.")
+        else:
+            print(f"🚀 [UGV-Beast] Mission Dispatch: Delivering to {resident_name} (Room {target_room})")
+            speak(f"Delivering prescriptions to {resident_name}, Room {target_room}.")
+
         if medications:
             print(f"📋 [UGV-Beast] Loaded Prescriptions ({len(medications)} items): {[m.get('name') for m in medications]}")
         if resident_info.get('faceEmbeddings'):
@@ -95,8 +113,12 @@ def on_rover_command(data):
         ROVER_STATE["batteryLevel"] = max(10, ROVER_STATE["batteryLevel"] - 1)
         send_telemetry()
 
-        print(f"🎯 [UGV-Beast] Physically Arrived at Room {target_room} for {resident_name}!")
-        print(f"📷 [UGV-Beast] Ready for Face Biometric Verification.")
+        if cmd_type == 'ASSISTANCE':
+            print(f"🎯 [UGV-Beast] Arrived at Assistance Call in Room {target_room} for {resident_name}!")
+            speak(f"I have arrived at Room {target_room}. Caregivers have also been notified.")
+        else:
+            print(f"🎯 [UGV-Beast] Physically Arrived at Room {target_room} for {resident_name}!")
+            speak(f"Arrived at Room {target_room} for {resident_name}. Ready for biometric verification.")
 
     elif command == 'RETURN_TO_DOCK':
         print("🔋 [UGV-Beast] Driving back to Rover Dock...")

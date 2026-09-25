@@ -3,7 +3,6 @@ import { MetricsRow } from './MetricsRow.js';
 import { RoverHeroCard } from './RoverHeroCard.js';
 import { FacilityFloorplanSVG } from './FacilityFloorplanSVG.js';
 import { TasksTable } from './TasksTable.js';
-import { AssistanceAlertBanner } from './AssistanceAlertBanner.js';
 import { ScheduleModal } from './ScheduleModal.js';
 import { RoverDevice, RoverTask } from '../types.js';
 import { socket } from '../socket.js';
@@ -120,9 +119,6 @@ export function Dashboard({ currentRole, isScheduleModalOpen, onCloseScheduleMod
 
   return (
     <div>
-      {/* Resident Urgent Alert Banner */}
-      <AssistanceAlertBanner />
-
       {/* Top 4 KPI Glass Cards */}
       <MetricsRow rover={rover} tasks={tasks} />
 
