@@ -9,7 +9,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
   readonly mode = 'HARDWARE' as const;
   private roverId: string = '';
   private name: string = 'Waveshare UGV-Beast (Physical)';
-  private status: RoverStatus = RoverStatus.IDLE;
+  public status: RoverStatus = RoverStatus.IDLE;
   private batteryLevel: number = 95;
   private x: number = 10.0;
   private y: number = 2.0;
@@ -24,6 +24,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
   // Direct connection to Waveshare UGV-Beast built-in web controller
   private waveshareCtrlSocket: ClientSocket | null = null;
   private waveshareJsonSocket: ClientSocket | null = null;
+  private roverSessionCookie: string = '';
 
   constructor() {
     this.initDatabaseRecord();
@@ -47,6 +48,26 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     }
   }
 
+  private async refreshSessionCookie() {
+    try {
+      const roverIp = process.env.ROVER_IP || '192.168.0.11';
+      const roverPort = process.env.ROVER_PORT || '5000';
+      const roverPin = process.env.ROVER_PIN || '1122';
+      const resp = await fetch(`http://${roverIp}:${roverPort}/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `pin=${encodeURIComponent(roverPin)}`,
+        redirect: 'manual'
+      });
+      const cookieHeader = resp.headers.get('set-cookie');
+      if (cookieHeader) {
+        this.roverSessionCookie = cookieHeader.split(';')[0];
+      }
+    } catch (e) {
+      // Non-blocking
+    }
+  }
+
   /**
    * Connects directly to the Waveshare UGV-Beast web controller on port 5000
    * (Zero SSH or manual script execution required!)
@@ -55,6 +76,8 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     const roverIp = process.env.ROVER_IP || '192.168.0.11';
     const roverPort = process.env.ROVER_PORT || '5000';
     const roverUrl = `http://${roverIp}:${roverPort}`;
+
+    this.refreshSessionCookie();
 
     console.log(`🤖 [Hardware Rover] Initiating direct connection to Waveshare UGV-Beast at ${roverUrl}...`);
 
@@ -197,21 +220,45 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     };
   }
 
+  // Dynamic duration helper based on Euclidean distance
+  private calculateTransitDuration(startX: number, startY: number, targetX: number, targetY: number): { distance: number; durationMs: number; durationSec: number } {
+    const dx = targetX - startX;
+    const dy = targetY - startY;
+    const distance = Math.max(1.0, Math.sqrt(dx * dx + dy * dy));
+
+    // Dynamic travel calculation:
+    // Scale distance based on configurable seconds per coordinate unit (default: 1.5s/unit)
+    // Example: 10 units distance = 15 seconds transit time.
+    // Minimum 10 seconds, maximum 35 seconds (configurable via environment variables)
+    const secondsPerUnit = Number(process.env.ROVER_SECONDS_PER_UNIT) || 1.5;
+    const minSec = Number(process.env.ROVER_MIN_TRANSIT_SEC) || 10;
+    const maxSec = Number(process.env.ROVER_MAX_TRANSIT_SEC) || 35;
+
+    const durationSec = Math.max(minSec, Math.min(maxSec, distance * secondsPerUnit));
+    const durationMs = Math.round(durationSec * 1000);
+
+    return { distance, durationMs, durationSec };
+  }
+
   private sendPhysicalMotorCommand(left: number, right: number) {
     // 1. Send via Waveshare socket.io namespace
     if (this.waveshareJsonSocket?.connected) {
       this.waveshareJsonSocket.emit('json', { T: 1, L: left, R: right });
     }
 
-    // 2. Dual-redundancy: Send via Flask REST command endpoint
+    // 2. Dual-redundancy: Send via Flask REST command endpoint with cookie
     try {
       const roverIp = process.env.ROVER_IP || '192.168.0.11';
       const roverPort = process.env.ROVER_PORT || '5000';
       const form = new URLSearchParams();
       form.append('command', `base -c {"T":1,"L":${left},"R":${right}}`);
+      const headers: Record<string, string> = { 'Content-Type': 'application/x-www-form-urlencoded' };
+      if (this.roverSessionCookie) {
+        headers['Cookie'] = this.roverSessionCookie;
+      }
       fetch(`http://${roverIp}:${roverPort}/send_command`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        headers,
         body: form.toString()
       }).catch(() => {});
     } catch (e) {
@@ -227,8 +274,9 @@ export class HardwareRoverAdapter implements IRoverAdapter {
 
     this.status = RoverStatus.ESTOP;
 
-    // Immediately kill motor speed on physical robot
+    // Immediately kill motor speed on physical robot (send twice for safety)
     this.sendPhysicalMotorCommand(0, 0);
+    setTimeout(() => this.sendPhysicalMotorCommand(0, 0), 100);
     broadcast('rover:pi_command', { command: 'ESTOP' });
 
     await this.syncToDatabase();
@@ -271,6 +319,17 @@ export class HardwareRoverAdapter implements IRoverAdapter {
       console.warn('HardwareRover: Could not load task metadata:', e);
     }
 
+    const startX = this.x;
+    const startY = this.y;
+    const { distance, durationMs, durationSec } = this.calculateTransitDuration(
+      startX,
+      startY,
+      targetCoords.x,
+      targetCoords.y
+    );
+
+    const motorSpeed = Number(process.env.ROVER_MOTOR_SPEED) || 0.35;
+
     // Also broadcast to any connected client script
     broadcast('rover:pi_command', {
       command: 'NAVIGATE',
@@ -278,12 +337,15 @@ export class HardwareRoverAdapter implements IRoverAdapter {
       targetRoom: targetRoomNumber,
       targetX: targetCoords.x,
       targetY: targetCoords.y,
-      speed: 0.35,
+      speed: motorSpeed,
+      durationMs,
       resident: residentData,
       medications: medicationsData
     });
 
-    console.log(`🤖 [Hardware Rover] Physical Mission Dispatch: Driving UGV-Beast to Room ${targetRoomNumber}...`);
+    console.log(
+      `🤖 [Hardware Rover] Physical Mission Dispatch: Driving UGV-Beast to Room ${targetRoomNumber} (dist: ${distance.toFixed(1)} units, duration: ${durationSec.toFixed(1)}s)...`
+    );
 
     // Transition task to EN_ROUTE immediately as motors engage
     try {
@@ -298,17 +360,22 @@ export class HardwareRoverAdapter implements IRoverAdapter {
       console.warn('HardwareRover: EN_ROUTE transition notice:', e.message);
     }
 
-    // Command physical motors forward at safe demo speed (0.35 m/s)
-    this.sendPhysicalMotorCommand(0.35, 0.35);
+    // Initial forward motor drive command
+    this.sendPhysicalMotorCommand(motorSpeed, motorSpeed);
 
-    const startX = this.x;
-    const startY = this.y;
     const startTime = Date.now();
-    const durationMs = 3800; // 3.8 second physical drive interval
+    let lastHeartbeatSent = Date.now();
 
     this.movementTimer = setInterval(async () => {
-      const elapsed = Date.now() - startTime;
+      const now = Date.now();
+      const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / durationMs);
+
+      // Continuous motor heartbeat every 450ms keeps wheels spinning continuously
+      if (progress < 1 && now - lastHeartbeatSent >= 450) {
+        this.sendPhysicalMotorCommand(motorSpeed, motorSpeed);
+        lastHeartbeatSent = now;
+      }
 
       this.x = Number((startX + (targetCoords.x - startX) * progress).toFixed(2));
       this.y = Number((startY + (targetCoords.y - startY) * progress).toFixed(2));
@@ -322,8 +389,9 @@ export class HardwareRoverAdapter implements IRoverAdapter {
           this.movementTimer = null;
         }
 
-        // Stop physical robot motors
+        // Stop physical robot motors firmly
         this.sendPhysicalMotorCommand(0, 0);
+        setTimeout(() => this.sendPhysicalMotorCommand(0, 0), 100);
 
         // Flash headlights to signal arrival
         if (this.waveshareCtrlSocket?.connected) {
@@ -377,21 +445,42 @@ export class HardwareRoverAdapter implements IRoverAdapter {
     this.status = RoverStatus.RETURNING;
     this.currentRoom = 'CORRIDOR';
 
-    // Reverse motors towards dock at -0.35 m/s
-    this.sendPhysicalMotorCommand(-0.35, -0.35);
-
-    broadcast('rover:pi_command', { command: 'RETURN_TO_DOCK', targetX: 10.0, targetY: 2.0 });
-
     const startX = this.x;
     const startY = this.y;
     const targetX = 10.0;
     const targetY = 2.0;
+
+    const { distance, durationMs, durationSec } = this.calculateTransitDuration(
+      startX,
+      startY,
+      targetX,
+      targetY
+    );
+
+    const returnSpeed = Number(process.env.ROVER_RETURN_SPEED) || -0.35;
+
+    console.log(
+      `🤖 [Hardware Rover] Returning to Dock (dist: ${distance.toFixed(1)} units, duration: ${durationSec.toFixed(1)}s)...`
+    );
+
+    // Initial reverse motor command
+    this.sendPhysicalMotorCommand(returnSpeed, returnSpeed);
+
+    broadcast('rover:pi_command', { command: 'RETURN_TO_DOCK', targetX, targetY, durationMs });
+
     const startTime = Date.now();
-    const durationMs = 3200;
+    let lastHeartbeatSent = Date.now();
 
     this.movementTimer = setInterval(async () => {
-      const elapsed = Date.now() - startTime;
+      const now = Date.now();
+      const elapsed = now - startTime;
       const progress = Math.min(1, elapsed / durationMs);
+
+      // Continuous reverse motor heartbeat every 450ms
+      if (progress < 1 && now - lastHeartbeatSent >= 450) {
+        this.sendPhysicalMotorCommand(returnSpeed, returnSpeed);
+        lastHeartbeatSent = now;
+      }
 
       this.x = Number((startX + (targetX - startX) * progress).toFixed(2));
       this.y = Number((startY + (targetY - startY) * progress).toFixed(2));
@@ -405,8 +494,9 @@ export class HardwareRoverAdapter implements IRoverAdapter {
           this.movementTimer = null;
         }
 
-        // Stop physical robot motors
+        // Stop physical robot motors firmly
         this.sendPhysicalMotorCommand(0, 0);
+        setTimeout(() => this.sendPhysicalMotorCommand(0, 0), 100);
 
         this.status = RoverStatus.IDLE;
         this.currentRoom = 'DOCK';

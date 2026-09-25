@@ -436,6 +436,6 @@ devicesRouter.post('/:id/send-to-room', async (req: Request, res: Response) => {
 // Alias for goto-room
 devicesRouter.post('/:id/goto-room', async (req: Request, res: Response) => {
   req.url = `/${req.params.id}/send-to-room`;
-  devicesRouter.handle(req, res, () => {});
+  (devicesRouter as any).handle(req, res, () => {});
 });
 

@@ -10,7 +10,7 @@ export class VirtualRoverAdapter implements IRoverAdapter {
   private name: string = 'Rover-01 (Virtual)';
   private x: number = 10.0;
   private y: number = 2.0; // Dock coordinates
-  private status: RoverStatus = RoverStatus.IDLE;
+  public status: RoverStatus = RoverStatus.IDLE;
   private batteryLevel: number = 100;
   private currentRoom: string | null = 'DOCK';
   private movementTimer: NodeJS.Timeout | null = null;

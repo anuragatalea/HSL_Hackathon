@@ -20,6 +20,7 @@ export interface RoverTelemetry {
 
 export interface IRoverAdapter {
   readonly mode: 'SIMULATION' | 'HARDWARE';
+  status?: RoverStatus;
   dispatchToRoom(taskId: string, targetRoomNumber: string, targetCoords: Waypoint): Promise<void>;
   returnToDock(): Promise<void>;
   emergencyStop(): Promise<void>;
