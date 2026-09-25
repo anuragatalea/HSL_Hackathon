@@ -13,6 +13,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
+    "db:seed:force": "tsx prisma/seed.ts --force",
     "db:studio": "prisma studio",
     "test:fsm": "tsx src/tests/verifyPhase2.ts",
     "test:api": "tsx src/tests/verifyPhase3.ts",

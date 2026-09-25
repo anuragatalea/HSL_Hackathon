@@ -19,7 +19,26 @@ function hashPassword(password: string): string {
 }
 
 async function main() {
-  console.log('🌱 Starting ALEA Care Smart Rover database seeding...');
+  console.log('🌱 Checking ALEA Care Smart Rover database state...');
+
+  const isForce = process.argv.includes('--force');
+
+  // Check if database has already been initialized with existing records
+  const residentCount = await prisma.resident.count();
+  const userCount = await prisma.user.count();
+
+  if (!isForce && (residentCount > 0 || userCount > 0)) {
+    console.log(`🛡️ Database already initialized (${residentCount} residents, ${userCount} users found).`);
+    console.log('🔒 Skipping destructive table wipe to preserve enrolled biometric face embeddings & patient data.');
+    console.log('💡 Tip: To force a complete reset to factory seed defaults, run: npm run db:seed:force');
+    return;
+  }
+
+  if (isForce) {
+    console.log('⚠️ --force flag detected: proceeding with complete database reset...');
+  } else {
+    console.log('🚀 First-time database setup detected. Seeding initial facility data...');
+  }
 
   // 1. Clean existing records in reverse dependency order
   await prisma.roverAuditLog.deleteMany();
