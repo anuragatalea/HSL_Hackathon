@@ -19,7 +19,7 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
   onToggleFullscreen,
   isFullscreen = false
 }) => {
-  const [streamMode, setStreamMode] = useState<'synthetic' | 'webcam' | 'hardware'>('synthetic');
+  const [streamMode, setStreamMode] = useState<'synthetic' | 'webcam' | 'hardware'>('hardware');
   const [streamUrl, setStreamUrl] = useState<string>('/api/rover/devices/stream');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempUrl, setTempUrl] = useState(streamUrl);
@@ -418,47 +418,7 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
             borderRadius: '14px',
             padding: '2px'
           }}>
-            <button
-              onClick={() => setStreamMode('synthetic')}
-              title="Procedural 3D corridor view with computer vision overlays"
-              style={{
-                background: streamMode === 'synthetic' ? '#38bdf8' : 'transparent',
-                color: streamMode === 'synthetic' ? '#0f172a' : '#94a3b8',
-                border: 'none',
-                padding: '3px 8px',
-                borderRadius: '12px',
-                fontSize: '10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-            >
-              <Sparkles size={11} />
-              <span>Synthetic</span>
-            </button>
 
-            <button
-              onClick={() => setStreamMode('webcam')}
-              title="Use local device camera (webcam)"
-              style={{
-                background: streamMode === 'webcam' ? '#38bdf8' : 'transparent',
-                color: streamMode === 'webcam' ? '#0f172a' : '#94a3b8',
-                border: 'none',
-                padding: '3px 8px',
-                borderRadius: '12px',
-                fontSize: '10px',
-                fontWeight: 700,
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '3px'
-              }}
-            >
-              <Video size={11} />
-              <span>Webcam</span>
-            </button>
 
             <button
               onClick={() => setStreamMode('hardware')}
