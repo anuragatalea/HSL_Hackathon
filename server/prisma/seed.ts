@@ -1,4 +1,15 @@
-import { PrismaClient, TaskStatus, RoverStatus, ActorType, UserRole } from '@prisma/client';
+import { 
+  PrismaClient, 
+  TaskStatus, 
+  RoverStatus, 
+  ActorType, 
+  UserRole,
+  MedicationCategory,
+  DosageForm,
+  AgeGroup,
+  FrequencyCode,
+  StorageRequirement 
+} from '@prisma/client';
 import crypto from 'crypto';
 
 const prisma = new PrismaClient();
@@ -16,6 +27,7 @@ async function main() {
   await prisma.residentAssistance.deleteMany();
   await prisma.roverTask.deleteMany();
   await prisma.roverSchedule.deleteMany();
+  await prisma.medication.deleteMany();
   await prisma.roverDevice.deleteMany();
   await prisma.mediaAsset.deleteMany();
   await prisma.activity.deleteMany();
@@ -282,7 +294,178 @@ async function main() {
 
   console.log('🤖 Seeded Rover-01 at Dock with 100% battery.');
 
-  // 9. Seed Delivery Schedule for Hero Demo (Mary Johnson @ 10:00 AM)
+  // 9. Seed Master Medication Formulary (Clinical Catalog)
+  const metformin = await prisma.medication.create({
+    data: {
+      name: 'Metformin Hydrochloride',
+      brandName: 'Glucophage',
+      ndcCode: '0087-6060-05',
+      category: MedicationCategory.ANTIDIABETIC,
+      form: DosageForm.TABLET,
+      standardStrength: '500 mg',
+      targetAgeGroup: AgeGroup.ALL_ADULTS,
+      minAgeYears: 18,
+      isBeersList: false,
+      recommendedFrequency: FrequencyCode.TWICE_DAILY_BID,
+      maxTimesPerDay: 3,
+      minHoursBetweenDoses: 6,
+      maxDailyDoseMg: 2550,
+      instructions: 'Take with breakfast or meals and a full glass of water. Do not crush or chew.',
+      requiresFood: true,
+      storageTemp: StorageRequirement.ROOM_TEMP,
+      isControlledSubstance: false,
+      contraindications: 'Severe renal impairment (eGFR < 30 mL/min), acute metabolic acidosis.',
+      sideEffects: 'Mild nausea, abdominal discomfort, diarrhea.'
+    }
+  });
+
+  const lisinopril = await prisma.medication.create({
+    data: {
+      name: 'Lisinopril',
+      brandName: 'Prinivil / Zestril',
+      ndcCode: '0006-0207-58',
+      category: MedicationCategory.CARDIOVASCULAR,
+      form: DosageForm.TABLET,
+      standardStrength: '10 mg',
+      targetAgeGroup: AgeGroup.ALL_ADULTS,
+      minAgeYears: 18,
+      isBeersList: false,
+      recommendedFrequency: FrequencyCode.ONCE_DAILY_QD,
+      maxTimesPerDay: 1,
+      minHoursBetweenDoses: 20,
+      maxDailyDoseMg: 40,
+      instructions: 'Take once daily in the morning for blood pressure management.',
+      requiresFood: false,
+      storageTemp: StorageRequirement.ROOM_TEMP,
+      isControlledSubstance: false,
+      contraindications: 'History of angioedema, pregnancy.',
+      sideEffects: 'Dry persistent cough, dizziness upon standing, hyperkalemia.'
+    }
+  });
+
+  const aspirin = await prisma.medication.create({
+    data: {
+      name: 'Aspirin Low-Dose',
+      brandName: 'Bayer Cardio Chewable',
+      ndcCode: '0280-2100-36',
+      category: MedicationCategory.CARDIOVASCULAR,
+      form: DosageForm.TABLET,
+      standardStrength: '81 mg',
+      targetAgeGroup: AgeGroup.GERIATRIC_65_PLUS,
+      minAgeYears: 50,
+      isBeersList: false,
+      recommendedFrequency: FrequencyCode.ONCE_DAILY_QD,
+      maxTimesPerDay: 1,
+      minHoursBetweenDoses: 24,
+      maxDailyDoseMg: 325,
+      instructions: 'Cardioprotective antiplatelet. Chew or swallow with food to avoid gastric irritation.',
+      requiresFood: true,
+      storageTemp: StorageRequirement.ROOM_TEMP,
+      isControlledSubstance: false,
+      contraindications: 'Active bleeding ulcer, hemophilia, severe hepatic failure.',
+      sideEffects: 'Mild dyspepsia, increased tendency to bruise.'
+    }
+  });
+
+  await prisma.medication.create({
+    data: {
+      name: 'Atorvastatin Calcium',
+      brandName: 'Lipitor',
+      ndcCode: '0071-0155-23',
+      category: MedicationCategory.CARDIOVASCULAR,
+      form: DosageForm.TABLET,
+      standardStrength: '20 mg',
+      targetAgeGroup: AgeGroup.ALL_ADULTS,
+      minAgeYears: 18,
+      isBeersList: false,
+      recommendedFrequency: FrequencyCode.ONCE_DAILY_QD,
+      maxTimesPerDay: 1,
+      minHoursBetweenDoses: 20,
+      maxDailyDoseMg: 80,
+      instructions: 'Cholesterol management. Best taken in the evening with water.',
+      requiresFood: false,
+      storageTemp: StorageRequirement.ROOM_TEMP,
+      isControlledSubstance: false,
+      contraindications: 'Active liver disease, unexplained persistent elevation of hepatic transaminases.',
+      sideEffects: 'Myalgia (muscle aches), mild fatigue.'
+    }
+  });
+
+  await prisma.medication.create({
+    data: {
+      name: 'Donepezil Hydrochloride',
+      brandName: 'Aricept',
+      ndcCode: '62856-245-30',
+      category: MedicationCategory.PSYCHIATRIC_NEUROLOGIC,
+      form: DosageForm.TABLET,
+      standardStrength: '5 mg',
+      targetAgeGroup: AgeGroup.GERIATRIC_65_PLUS,
+      minAgeYears: 60,
+      isBeersList: false,
+      recommendedFrequency: FrequencyCode.ONCE_DAILY_QD,
+      maxTimesPerDay: 1,
+      minHoursBetweenDoses: 24,
+      maxDailyDoseMg: 10,
+      instructions: 'Cognitive & memory support. Take at bedtime with or without food.',
+      requiresFood: false,
+      storageTemp: StorageRequirement.ROOM_TEMP,
+      isControlledSubstance: false,
+      contraindications: 'Known hypersensitivity to donepezil or piperidine derivatives.',
+      sideEffects: 'Vivid dreams, mild nausea, bradycardia risk.'
+    }
+  });
+
+  await prisma.medication.create({
+    data: {
+      name: 'Insulin Glargine',
+      brandName: 'Lantus SoloStar',
+      ndcCode: '0088-2219-05',
+      category: MedicationCategory.ANTIDIABETIC,
+      form: DosageForm.INJECTION,
+      standardStrength: '100 units/mL',
+      targetAgeGroup: AgeGroup.ALL_ADULTS,
+      minAgeYears: 18,
+      isBeersList: false,
+      recommendedFrequency: FrequencyCode.ONCE_DAILY_QD,
+      maxTimesPerDay: 1,
+      minHoursBetweenDoses: 24,
+      instructions: 'Long-acting 24h basal insulin. Must be kept refrigerated (2°C to 8°C). Do not freeze.',
+      requiresFood: false,
+      storageTemp: StorageRequirement.REFRIGERATED_2_TO_8C,
+      isControlledSubstance: false,
+      contraindications: 'During acute episodes of hypoglycemia.',
+      sideEffects: 'Hypoglycemia, injection site lipodystrophy.'
+    }
+  });
+
+  await prisma.medication.create({
+    data: {
+      name: 'Diphenhydramine Hydrochloride',
+      brandName: 'Benadryl',
+      ndcCode: '50580-506-24',
+      category: MedicationCategory.ANALGESIC_PAIN,
+      form: DosageForm.CAPSULE,
+      standardStrength: '25 mg',
+      targetAgeGroup: AgeGroup.ADULT_18_64,
+      minAgeYears: 12,
+      maxAgeYears: 64,
+      isBeersList: true,
+      beersRiskNotes: 'Strong anticholinergic properties: Extreme fall risk, acute delirium/confusion, and urinary retention in older adults (Beers Criteria).',
+      recommendedFrequency: FrequencyCode.ONCE_DAILY_QD,
+      maxTimesPerDay: 2,
+      minHoursBetweenDoses: 8,
+      instructions: 'Nighttime allergy/pruritus. Strictly avoid or flag warning for seniors over 65.',
+      requiresFood: false,
+      storageTemp: StorageRequirement.ROOM_TEMP,
+      isControlledSubstance: false,
+      contraindications: 'Narrow-angle glaucoma, prostatic hypertrophy, acute asthma attack.',
+      sideEffects: 'Severe sedation, cognitive impairment, dry mouth.'
+    }
+  });
+
+  console.log('💊 Seeded Master Medication Formulary (7 Clinical Drugs with Beers List & Age Limits).');
+
+  // 10. Seed Delivery Schedule for Hero Demo (Mary Johnson @ 10:00 AM)
   const maryMeds = [
     { name: 'Metformin', dose: '500 mg', instructions: 'Take with breakfast and full glass of water', compartment: 1 },
     { name: 'Lisinopril', dose: '10 mg', instructions: 'Blood pressure management', compartment: 1 },
@@ -294,6 +477,7 @@ async function main() {
       residentId: mary.id,
       roomId: room102.id,
       itemName: 'Morning Cardiovascular & Metabolic Regimen',
+      medicationId: metformin.id,
       medications: maryMeds,
       scheduledTime: '10:00',
       frequency: 'DAILY',

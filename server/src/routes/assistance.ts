@@ -80,7 +80,8 @@ assistanceRouter.post('/', async (req: Request, res: Response) => {
     });
 
     const roverAdapter = getRoverAdapter();
-    const isPhysicalRoverMoving = roverAdapter.status !== 'IDLE' && roverAdapter.status !== 'CHARGING';
+    const telemetry = await roverAdapter.getTelemetry().catch(() => null);
+    const isPhysicalRoverMoving = telemetry ? (telemetry.status !== 'IDLE' && telemetry.status !== 'CHARGING') : false;
     const isRoverBusy = !!activeDelivery || isPhysicalRoverMoving;
 
     // BRANCH A: Rover is FREE -> Dispatched as Rapid First Responder
@@ -251,7 +252,8 @@ assistanceRouter.patch('/:id/resolve', async (req: Request, res: Response) => {
 
     // If rover was dispatched to assist, instruct it to safely return to dock
     const adapter = getRoverAdapter();
-    if (adapter.status === 'ARRIVED') {
+    const telemetry = await adapter.getTelemetry().catch(() => null);
+    if (telemetry?.status === 'ARRIVED') {
       adapter.returnToDock().catch(console.error);
     }
 

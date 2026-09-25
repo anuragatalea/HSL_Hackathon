@@ -48,6 +48,47 @@ enum ActorType {
   ROVER
 }
 
+enum MedicationCategory {
+  CARDIOVASCULAR
+  ANTIDIABETIC
+  ANALGESIC_PAIN
+  ANTIBIOTIC
+  PSYCHIATRIC_NEUROLOGIC
+  RESPIRATORY
+  GASTROINTESTINAL
+  SUPPLEMENT_VITAMIN
+}
+
+enum DosageForm {
+  TABLET
+  CAPSULE
+  LIQUID_ORAL
+  TRANSDERMAL_PATCH
+  INJECTION
+  INHALER
+}
+
+enum AgeGroup {
+  PEDIATRIC_UNDER_18
+  ADULT_18_64
+  GERIATRIC_65_PLUS
+  ALL_ADULTS
+}
+
+enum FrequencyCode {
+  ONCE_DAILY_QD
+  TWICE_DAILY_BID
+  THREE_TIMES_TID
+  FOUR_TIMES_QID
+  EVERY_4_HOURS_Q4H
+  AS_NEEDED_PRN
+}
+
+enum StorageRequirement {
+  ROOM_TEMP
+  REFRIGERATED_2_TO_8C
+}
+
 model Resident {
   id             String               @id @default(uuid())
   name           String
@@ -94,6 +135,8 @@ model RoverSchedule {
   resident          Resident    @relation(fields: [residentId], references: [id])
   roomId            String
   itemName          String
+  medicationId      String?
+  medication        Medication? @relation(fields: [medicationId], references: [id], onDelete: SetNull)
   medications       Json?       // Array of { name, dose, instructions, compartment }
   scheduledTime     String      // e.g. "10:00" or "11:00"
   frequency         String      @default("ONCE")
@@ -115,6 +158,8 @@ model RoverTask {
   roomId        String
   roverId       String
   rover         RoverDevice        @relation(fields: [roverId], references: [id])
+  medicationId  String?
+  medication    Medication?        @relation(fields: [medicationId], references: [id], onDelete: SetNull)
   medications   Json?              // Array of { name, dose, instructions, compartment }
   status        TaskStatus         @default(SCHEDULED)
   scheduledAt   DateTime
@@ -129,6 +174,36 @@ model RoverTask {
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 }
+
+model Medication {
+  id                    String              @id @default(uuid())
+  name                  String              @unique
+  brandName             String?
+  ndcCode               String?
+  category              MedicationCategory
+  form                  DosageForm
+  standardStrength      String
+  targetAgeGroup        AgeGroup            @default(ALL_ADULTS)
+  minAgeYears           Int?                @default(18)
+  maxAgeYears           Int?
+  isBeersList           Boolean             @default(false)
+  beersRiskNotes        String?
+  recommendedFrequency  FrequencyCode       @default(ONCE_DAILY_QD)
+  maxTimesPerDay        Int                 @default(1)
+  minHoursBetweenDoses  Int                 @default(4)
+  maxDailyDoseMg        Float?
+  instructions          String
+  requiresFood          Boolean             @default(false)
+  storageTemp           StorageRequirement  @default(ROOM_TEMP)
+  isControlledSubstance Boolean             @default(false)
+  contraindications     String?
+  sideEffects           String?
+  schedules             RoverSchedule[]
+  tasks                 RoverTask[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+}
+
 
 model RoverTaskAttempt {
   id            String    @id @default(uuid())

@@ -23,6 +23,69 @@ export type RoverStatus =
   | 'OFFLINE'
   | 'ESTOP';
 
+export type MedicationCategory =
+  | 'CARDIOVASCULAR'
+  | 'ANTIDIABETIC'
+  | 'ANALGESIC_PAIN'
+  | 'ANTIBIOTIC'
+  | 'PSYCHIATRIC_NEUROLOGIC'
+  | 'RESPIRATORY'
+  | 'GASTROINTESTINAL'
+  | 'SUPPLEMENT_VITAMIN';
+
+export type DosageForm =
+  | 'TABLET'
+  | 'CAPSULE'
+  | 'LIQUID_ORAL'
+  | 'TRANSDERMAL_PATCH'
+  | 'INJECTION'
+  | 'INHALER';
+
+export type AgeGroup =
+  | 'PEDIATRIC_UNDER_18'
+  | 'ADULT_18_64'
+  | 'GERIATRIC_65_PLUS'
+  | 'ALL_ADULTS';
+
+export type FrequencyCode =
+  | 'ONCE_DAILY_QD'
+  | 'TWICE_DAILY_BID'
+  | 'THREE_TIMES_TID'
+  | 'FOUR_TIMES_QID'
+  | 'EVERY_4_HOURS_Q4H'
+  | 'AS_NEEDED_PRN';
+
+export type StorageRequirement =
+  | 'ROOM_TEMP'
+  | 'REFRIGERATED_2_TO_8C';
+
+export interface Medication {
+  id: string;
+  name: string;
+  brandName?: string | null;
+  ndcCode?: string | null;
+  category: MedicationCategory;
+  form: DosageForm;
+  standardStrength: string;
+  targetAgeGroup: AgeGroup;
+  minAgeYears?: number | null;
+  maxAgeYears?: number | null;
+  isBeersList: boolean;
+  beersRiskNotes?: string | null;
+  recommendedFrequency: FrequencyCode;
+  maxTimesPerDay: number;
+  minHoursBetweenDoses: number;
+  maxDailyDoseMg?: number | null;
+  instructions: string;
+  requiresFood: boolean;
+  storageTemp: StorageRequirement;
+  isControlledSubstance: boolean;
+  contraindications?: string | null;
+  sideEffects?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface MedicationItem {
   name: string;
   dose: string;
@@ -72,6 +135,8 @@ export interface RoverSchedule {
   roomId: string;
   room?: Room | null;
   itemName: string;
+  medicationId?: string | null;
+  medication?: Medication | null;
   medications?: MedicationItem[] | null;
   scheduledTime: string;
   frequency: string;
@@ -117,6 +182,8 @@ export interface RoverTask {
   roomId: string;
   roverId: string;
   rover: RoverDevice;
+  medicationId?: string | null;
+  medication?: Medication | null;
   medications?: MedicationItem[] | null;
   status: TaskStatus;
   scheduledAt: string;

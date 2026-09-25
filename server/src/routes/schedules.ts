@@ -3,6 +3,7 @@ import { prisma } from '../prisma.js';
 import { broadcast } from '../socket.js';
 import { logAuditEvent } from '../services/auditService.js';
 import { ActorType } from '@prisma/client';
+import { validateClinicalSafety } from '../services/clinicalSafetyService.js';
 
 export const schedulesRouter = Router();
 
@@ -12,6 +13,7 @@ schedulesRouter.get('/', async (req: Request, res: Response) => {
     const schedules = await prisma.roverSchedule.findMany({
       include: {
         resident: true,
+        medication: true,
         tasks: {
           orderBy: { createdAt: 'desc' },
           take: 1
@@ -42,6 +44,7 @@ schedulesRouter.post('/', async (req: Request, res: Response) => {
       residentId,
       roomId,
       itemName,
+      medicationId,
       medications,
       scheduledTime,
       frequency = 'DAILY',
@@ -59,12 +62,43 @@ schedulesRouter.post('/', async (req: Request, res: Response) => {
       return;
     }
 
+    // Clinical Safety Validation Check
+    let safetyWarnings: string[] = [];
+    let suggestedCompartment = 1;
+
+    if (medicationId) {
+      const safetyCheck = await validateClinicalSafety(prisma, residentId, medicationId, scheduledTime);
+      if (!safetyCheck.allowed) {
+        res.status(400).json({ success: false, error: safetyCheck.blockReason });
+        return;
+      }
+      safetyWarnings = safetyCheck.warnings;
+      suggestedCompartment = safetyCheck.safeCompartmentSuggested;
+    }
+
     // Determine display name
     let effectiveItemName = itemName;
-    if (!effectiveItemName && Array.isArray(medications) && medications.length > 0) {
+    if (!effectiveItemName && medicationId) {
+      const med = await prisma.medication.findUnique({ where: { id: medicationId } });
+      effectiveItemName = med ? `${med.name} (${med.standardStrength})` : 'Prescription Delivery';
+    } else if (!effectiveItemName && Array.isArray(medications) && medications.length > 0) {
       effectiveItemName = medications.map((m: any) => m.name).join(', ');
     } else if (!effectiveItemName) {
       effectiveItemName = 'Prescription Delivery';
+    }
+
+    // Ensure medications array has appropriate compartment assigned
+    let effectiveMeds = Array.isArray(medications) ? medications : undefined;
+    if (!effectiveMeds && medicationId) {
+      const med = await prisma.medication.findUnique({ where: { id: medicationId } });
+      if (med) {
+        effectiveMeds = [{
+          name: med.name,
+          dose: med.standardStrength,
+          instructions: med.instructions,
+          compartment: suggestedCompartment
+        }];
+      }
     }
 
     const schedule = await prisma.roverSchedule.create({
@@ -72,7 +106,8 @@ schedulesRouter.post('/', async (req: Request, res: Response) => {
         residentId,
         roomId,
         itemName: effectiveItemName,
-        medications: Array.isArray(medications) ? medications : undefined,
+        medicationId: medicationId || null,
+        medications: effectiveMeds,
         scheduledTime,
         frequency,
         assignedStaffId,
@@ -81,7 +116,7 @@ schedulesRouter.post('/', async (req: Request, res: Response) => {
         snoozeDurationMin: Number(snoozeDurationMin),
         isActive: true
       },
-      include: { resident: true }
+      include: { resident: true, medication: true }
     });
 
     await logAuditEvent(prisma, {

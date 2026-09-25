@@ -11,9 +11,10 @@ import { AuditLogViewer } from './components/AuditLogViewer.js';
 import { ScheduleModal } from './components/ScheduleModal.js';
 import { AuthModal } from './components/AuthModal.js';
 import { AssistanceAlertBanner } from './components/AssistanceAlertBanner.js';
+import { MedicationCatalog } from './components/MedicationCatalog.js';
 
 function AppContent() {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit' | 'formulary'>('dashboard');
   const [isScheduleModalOpen, setIsScheduleModalOpen] = useState(false);
   const [currentRole, setCurrentRole] = useState('Nurse Sarah Jenkins (RN-402)');
 
@@ -88,6 +89,10 @@ function AppContent() {
             currentRole={currentRole}
             onNavigateToSchedules={() => setActiveTab('schedules')}
           />
+        )}
+
+        {activeTab === 'formulary' && (
+          <MedicationCatalog currentRole={currentRole} />
         )}
 
         {activeTab === 'kiosk' && (

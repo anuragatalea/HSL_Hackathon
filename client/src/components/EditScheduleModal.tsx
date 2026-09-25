@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Clock, Pill, RotateCcw, AlertTriangle, Check, User, Plus, Trash2, Sparkles } from 'lucide-react';
-import { RoverSchedule, MedicationItem } from '../types.js';
+import { X, Clock, Pill, RotateCcw, AlertTriangle, Check, User, Plus, Trash2, Sparkles, ThermometerSnowflake } from 'lucide-react';
+import { RoverSchedule, MedicationItem, Medication } from '../types.js';
 
 interface EditScheduleModalProps {
   schedule: RoverSchedule | null;
@@ -24,8 +24,22 @@ export const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
   const [maxAttempts, setMaxAttempts] = useState(3);
   const [isActive, setIsActive] = useState(true);
   const [medications, setMedications] = useState<MedicationItem[]>([]);
+  const [formularyMeds, setFormularyMeds] = useState<Medication[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isOpen) {
+      fetch('/api/rover/medications')
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success && Array.isArray(data.data)) {
+            setFormularyMeds(data.data);
+          }
+        })
+        .catch(console.error);
+    }
+  }, [isOpen]);
 
   useEffect(() => {
     if (schedule) {
@@ -48,6 +62,35 @@ export const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
   }, [schedule]);
 
   if (!isOpen || !schedule) return null;
+
+  const findMatchedFormulary = (name: string) => {
+    if (!name) return undefined;
+    const lower = name.toLowerCase().trim();
+    return formularyMeds.find((fm) => {
+      const fmLower = fm.name.toLowerCase().trim();
+      return fmLower === lower || fmLower.startsWith(lower) || lower.startsWith(fmLower);
+    });
+  };
+
+  const handleSelectMedicationForIndex = (index: number, medName: string) => {
+    const med = findMatchedFormulary(medName);
+    const updated = [...medications];
+    if (med) {
+      const compartment = med.storageTemp === 'REFRIGERATED_2_TO_8C' ? 4 : (updated[index]?.compartment || 1);
+      updated[index] = {
+        name: med.name,
+        dose: med.standardStrength,
+        instructions: med.instructions,
+        compartment
+      };
+    } else {
+      updated[index] = {
+        ...updated[index],
+        name: medName
+      };
+    }
+    setMedications(updated);
+  };
 
   const handleAddMedication = () => {
     setMedications([
@@ -131,10 +174,11 @@ export const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
           border: '1px solid hsl(215, 25%, 28%)',
           borderRadius: '16px',
           width: '100%',
-          maxWidth: '640px',
+          maxWidth: '740px',
           maxHeight: '92vh',
           boxShadow: '0 25px 60px rgba(0, 0, 0, 0.7), 0 0 25px hsla(217, 91%, 60%, 0.15)',
           overflowY: 'auto',
+          overflowX: 'hidden',
           display: 'flex',
           flexDirection: 'column'
         }}
@@ -331,86 +375,168 @@ export const EditScheduleModal: React.FC<EditScheduleModalProps> = ({
               </button>
             </div>
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {medications.map((med, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    background: 'hsl(217, 33%, 14%)',
-                    padding: '8px 10px',
-                    borderRadius: '8px',
-                    border: '1px solid hsl(215, 25%, 25%)',
-                    display: 'grid',
-                    gridTemplateColumns: '1.4fr 1fr 1fr 26px',
-                    gap: '8px',
-                    alignItems: 'center'
-                  }}
-                >
-                  <input
-                    type="text"
-                    placeholder="Medicine Name (Metformin)"
-                    value={med.name}
-                    onChange={(e) => handleUpdateMedication(idx, 'name', e.target.value)}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              {medications.map((med, idx) => {
+                const matchedFormulary = findMatchedFormulary(med.name);
+                const selectedValue = matchedFormulary ? matchedFormulary.name : med.name;
+                return (
+                  <div
+                    key={idx}
                     style={{
-                      background: 'hsl(222, 47%, 7%)',
+                      background: 'hsl(217, 33%, 14%)',
+                      padding: '10px 12px',
+                      borderRadius: '8px',
                       border: '1px solid hsl(215, 25%, 25%)',
-                      borderRadius: '6px',
-                      padding: '6px 8px',
-                      color: '#fff',
-                      fontSize: '0.8rem',
-                      outline: 'none'
-                    }}
-                  />
-                  <input
-                    type="text"
-                    placeholder="Dosage (500mg)"
-                    value={med.dose}
-                    onChange={(e) => handleUpdateMedication(idx, 'dose', e.target.value)}
-                    style={{
-                      background: 'hsl(222, 47%, 7%)',
-                      border: '1px solid hsl(215, 25%, 25%)',
-                      borderRadius: '6px',
-                      padding: '6px 8px',
-                      color: '#fff',
-                      fontSize: '0.8rem',
-                      outline: 'none'
-                    }}
-                  />
-                  <select
-                    value={med.compartment || 1}
-                    onChange={(e) => handleUpdateMedication(idx, 'compartment', Number(e.target.value))}
-                    style={{
-                      background: 'hsl(222, 47%, 7%)',
-                      border: '1px solid hsl(215, 25%, 25%)',
-                      borderRadius: '6px',
-                      padding: '6px 8px',
-                      color: '#fff',
-                      fontSize: '0.8rem',
-                      outline: 'none'
-                    }}
-                  >
-                    <option value={1}>Compartment #1</option>
-                    <option value={2}>Compartment #2</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveMedication(idx)}
-                    disabled={medications.length <= 1}
-                    style={{
-                      background: 'transparent',
-                      border: 'none',
-                      color: medications.length <= 1 ? 'hsl(215, 20%, 40%)' : '#f87171',
-                      cursor: medications.length <= 1 ? 'not-allowed' : 'pointer',
-                      padding: '2px',
                       display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
+                      flexDirection: 'column',
+                      gap: '8px',
+                      minWidth: 0
                     }}
                   >
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-              ))}
+                    <div
+                      style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 0.9fr) minmax(0, 1.15fr) 28px',
+                        gap: '8px',
+                        alignItems: 'center',
+                        width: '100%',
+                        minWidth: 0
+                      }}
+                    >
+                      <select
+                        value={selectedValue}
+                        onChange={(e) => handleSelectMedicationForIndex(idx, e.target.value)}
+                        style={{
+                          width: '100%',
+                          minWidth: 0,
+                          background: 'hsl(222, 47%, 7%)',
+                          border: '1px solid hsl(215, 25%, 25%)',
+                          borderRadius: '6px',
+                          padding: '7px 8px',
+                          color: selectedValue ? '#fff' : 'hsl(215, 20%, 55%)',
+                          fontSize: '0.82rem',
+                          outline: 'none',
+                          cursor: 'pointer',
+                          textOverflow: 'ellipsis'
+                        }}
+                      >
+                        <option value="">-- Choose from Master Formulary --</option>
+                        {formularyMeds.map((fm) => (
+                          <option key={fm.id} value={fm.name}>
+                            {fm.name} ({fm.standardStrength}) {fm.storageTemp === 'REFRIGERATED_2_TO_8C' ? '❄️ Cold' : ''} {fm.isBeersList ? '⚠️ Beers' : ''}
+                          </option>
+                        ))}
+                        {selectedValue && !formularyMeds.some((fm) => fm.name.toLowerCase() === selectedValue.toLowerCase()) && (
+                          <option value={selectedValue}>{selectedValue} (Custom)</option>
+                        )}
+                      </select>
+
+                      <input
+                        type="text"
+                        placeholder="Dose"
+                        value={med.dose}
+                        onChange={(e) => handleUpdateMedication(idx, 'dose', e.target.value)}
+                        style={{
+                          width: '100%',
+                          minWidth: 0,
+                          background: 'hsl(222, 47%, 7%)',
+                          border: '1px solid hsl(215, 25%, 25%)',
+                          borderRadius: '6px',
+                          padding: '7px 8px',
+                          color: '#fff',
+                          fontSize: '0.82rem',
+                          outline: 'none'
+                        }}
+                      />
+
+                      <select
+                        value={med.compartment || 1}
+                        onChange={(e) => handleUpdateMedication(idx, 'compartment', Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          minWidth: 0,
+                          background: 'hsl(222, 47%, 7%)',
+                          border: '1px solid hsl(215, 25%, 25%)',
+                          borderRadius: '6px',
+                          padding: '7px 6px',
+                          color: '#fff',
+                          fontSize: '0.82rem',
+                          outline: 'none',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <option value={1}>Bay #1 (Dry)</option>
+                        <option value={2}>Bay #2 (Dry)</option>
+                        <option value={3}>Bay #3 (Dry)</option>
+                        <option value={4}>Bay #4 (❄️ Cold)</option>
+                      </select>
+
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveMedication(idx)}
+                        disabled={medications.length <= 1}
+                        style={{
+                          background: 'transparent',
+                          border: 'none',
+                          color: medications.length <= 1 ? 'hsl(215, 20%, 40%)' : '#f87171',
+                          cursor: medications.length <= 1 ? 'not-allowed' : 'pointer',
+                          padding: '2px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Remove item"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+
+                    {/* Visual Clinical Alert Badges */}
+                    {matchedFormulary && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                        {matchedFormulary.isBeersList && (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: 'rgba(245, 158, 11, 0.15)',
+                              color: '#fbbf24',
+                              border: '1px solid rgba(245, 158, 11, 0.4)',
+                              borderRadius: '4px',
+                              padding: '2px 8px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            <AlertTriangle size={12} color="#fbbf24" />
+                            Beers Criteria Alert: High Geriatric Fall & Sedation Risk
+                          </span>
+                        )}
+                        {matchedFormulary.storageTemp === 'REFRIGERATED_2_TO_8C' && (
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '4px',
+                              background: 'rgba(6, 182, 212, 0.15)',
+                              color: '#38bdf8',
+                              border: '1px solid rgba(6, 182, 212, 0.4)',
+                              borderRadius: '4px',
+                              padding: '2px 8px',
+                              fontSize: '0.7rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            <ThermometerSnowflake size={12} color="#38bdf8" />
+                            Refrigerated (2°C–8°C) • Locked to Cold Bay #4
+                          </span>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
