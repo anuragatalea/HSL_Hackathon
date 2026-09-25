@@ -5,7 +5,7 @@ import { RoverStatus } from '@prisma/client';
 
 async function runPhase4Verification() {
   console.log('🧪 ==============================================================');
-  console.log('🧪 HSL CARE SMART ROVER — PHASE 4 ROVER ADAPTER TEST');
+  console.log('🧪 ALEA CARE SMART ROVER — PHASE 4 ROVER ADAPTER TEST');
   console.log('🧪 ==============================================================\n');
 
   const PORT = 4000;
@@ -31,7 +31,7 @@ async function runPhase4Verification() {
 
     // 4. Test Dispatch to Room 102
     console.log('📡 Step 4: Dispatching Rover to Room 102 (16.0, 10.0)...');
-    
+
     let receivedMovementUpdates = 0;
     socket.on('rover:telemetry', (data) => {
       if (data.status === RoverStatus.MOVING) {

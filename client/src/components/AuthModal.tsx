@@ -90,7 +90,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
               </h2>
             </div>
             <p style={{ margin: 0, fontSize: '0.825rem', color: 'hsl(215, 20%, 65%)' }}>
-              HSL Care Smart Rover Facility Operating System
+              ALEA Care Smart Rover Facility Operating System
             </p>
           </div>
           <button

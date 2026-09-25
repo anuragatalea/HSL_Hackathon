@@ -30,7 +30,7 @@ function AppContent() {
         color: '#38bdf8',
         fontWeight: 700
       }}>
-        Initializing HSL Care Smart Rover OS...
+        Initializing ALEA Care Smart Rover OS...
       </div>
     );
   }

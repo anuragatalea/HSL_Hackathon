@@ -1,4 +1,4 @@
-# 🤖 HSL Care Smart Rover
+# 🤖 ALEA Care Smart Rover
 
 > **Autonomous Bedside Delivery & Resident Assistance Platform for Senior Living Communities**  
 > *Built for Hebrew SeniorLife (HSL) Care Innovation • Dual-Mode (Virtual Simulation & Waveshare UGV-Beast Hardware)*
@@ -9,7 +9,7 @@
 
 In senior care facilities, clinical staff walk an average of **4+ miles per shift** performing routine supply distribution, non-urgent comfort deliveries, and repetitive status checks. 
 
-**HSL Care Smart Rover** is an end-to-end autonomous robotics and caregiver coordination platform designed to alleviate this operational strain. By uniting a **13-state transactional Finite State Machine (FSM)**, **zero-trust biometric facial authentication**, an interactive **2D CAD facility mission monitor**, and a **bedside resident kiosk**, the platform ensures scheduled medications and care packages are securely delivered directly to residents without cognitive or physical burden on nurses.
+**ALEA Care Smart Rover** is an end-to-end autonomous robotics and caregiver coordination platform designed to alleviate this operational strain. By uniting a **13-state transactional Finite State Machine (FSM)**, **zero-trust biometric facial authentication**, an interactive **2D CAD facility mission monitor**, and a **bedside resident kiosk**, the platform ensures scheduled medications and care packages are securely delivered directly to residents without cognitive or physical burden on nurses.
 
 ---
 
@@ -423,5 +423,5 @@ Use the floating **"🏆 Judge Pitch & Demo Guide"** button in the bottom right 
 
 ## 📄 License & Credits
 
-Developed by the **HSL Care Hackathon Team** for the Smart Rover Innovation Initiative.  
+Developed by the **ALEA Care Hackathon Team** for the Smart Rover Innovation Initiative.  
 Licensed under the [MIT License](LICENSE).

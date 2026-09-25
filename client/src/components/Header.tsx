@@ -104,7 +104,7 @@ export function Header({
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <h1 style={{ fontSize: '1.25rem', fontWeight: 800, letterSpacing: '-0.02em', margin: 0 }}>
-              HSL CARE
+              ALEA CARE
             </h1>
             <span style={{
               fontSize: '0.65rem',

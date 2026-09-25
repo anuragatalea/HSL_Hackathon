@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-HSL Care Smart Rover — Raspberry Pi Hardware Client
+ALEA Care Smart Rover — Raspberry Pi Hardware Client
 For Waveshare UGV-Beast Mobile Robot Platform
 
 Installation on Raspberry Pi:
@@ -39,7 +39,7 @@ ROVER_STATE = {
 
 @sio.event
 def connect():
-    print(f"🔗 Connected to HSL Care Backend Server: {SERVER_URL}")
+    print(f"🔗 Connected to ALEA Care Backend Server: {SERVER_URL}")
     sio.emit('rover:register', {
         "name": ROVER_STATE["name"],
         "hardware": "Waveshare UGV-Beast / Raspberry Pi",
@@ -48,7 +48,7 @@ def connect():
 
 @sio.event
 def disconnect():
-    print("❌ Disconnected from HSL Care Backend Server.")
+    print("❌ Disconnected from ALEA Care Backend Server.")
 
 @sio.on('rover:pi_command')
 def on_rover_command(data):
@@ -152,7 +152,7 @@ def send_telemetry():
     })
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='HSL Care UGV-Beast Raspberry Pi Client')
+    parser = argparse.ArgumentParser(description='ALEA Care UGV-Beast Raspberry Pi Client')
     parser.add_argument('--server', default='http://localhost:4000', help='URL of the Node.js backend server')
     args = parser.parse_args()
 
@@ -160,7 +160,7 @@ if __name__ == '__main__':
     SERVER_URL = args.server
 
     print("🤖 ==============================================================")
-    print("🤖 HSL CARE — WAVESHARE UGV-BEAST RASPBERRY PI CLIENT")
+    print("🤖 ALEA CARE — WAVESHARE UGV-BEAST RASPBERRY PI CLIENT")
     print(f"🤖 Connecting to Server at: {SERVER_URL}")
     print("🤖 ==============================================================")
 

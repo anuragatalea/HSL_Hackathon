@@ -7,7 +7,7 @@ const prisma = new PrismaClient();
 
 async function runPhase2Verification() {
   console.log('🧪 ==============================================================');
-  console.log('🧪 HSL CARE SMART ROVER — PHASE 2 FSM & AUDIT ENGINE VERIFICATION');
+  console.log('🧪 ALEA CARE SMART ROVER — PHASE 2 FSM & AUDIT ENGINE VERIFICATION');
   console.log('🧪 ==============================================================\n');
 
   try {

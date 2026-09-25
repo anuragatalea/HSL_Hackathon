@@ -259,7 +259,7 @@ export function RoverKiosk({ currentRole }: RoverKioskProps) {
           </div>
           <div>
             <h2 style={{ fontSize: '1.25rem', fontWeight: 800, margin: 0 }}>
-              HSL CARE • ON-ROVER KIOSK
+              ALEA CARE • ON-ROVER KIOSK
             </h2>
             <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>
               Autonomous Bedside Assistance & Delivery Terminal

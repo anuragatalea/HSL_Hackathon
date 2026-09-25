@@ -35,7 +35,7 @@ interface PoseGuide {
   voiceText: string;
 }
 
-// 5-Angle HSL Care biometric sequence: Straight -> Slight Left -> Slight Right -> Slight Up -> Slight Down
+// 5-Angle ALEA Care biometric sequence: Straight -> Slight Left -> Slight Right -> Slight Up -> Slight Down
 const POSE_GUIDES: PoseGuide[] = [
   {
     id: 'CENTER',

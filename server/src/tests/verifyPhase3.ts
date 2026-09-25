@@ -3,7 +3,7 @@ import { io as Client } from 'socket.io-client';
 
 async function runPhase3Verification() {
   console.log('🧪 ==============================================================');
-  console.log('🧪 HSL CARE SMART ROVER — PHASE 3 REST & SOCKET.IO API TEST');
+  console.log('🧪 ALEA CARE SMART ROVER — PHASE 3 REST & SOCKET.IO API TEST');
   console.log('🧪 ==============================================================\n');
 
   const PORT = 4000;

@@ -115,7 +115,7 @@ export function LoginPage() {
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
             <h1 style={{ fontSize: '1.65rem', fontWeight: 900, letterSpacing: '-0.03em', margin: 0 }}>
-              HSL CARE
+              ALEA CARE
             </h1>
             <span style={{
               fontSize: '0.7rem',

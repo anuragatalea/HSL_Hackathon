@@ -1,5 +1,5 @@
 /**
- * HSL Care Smart Rover - Hackathon Staged Release Automation
+ * ALEA Care Smart Rover - Hackathon Staged Release Automation
  * 
  * Usage:
  *   node scripts/release-phase.js [phase_number]
@@ -77,7 +77,7 @@ const targetPhaseArg = process.argv[2];
 
 if (targetPhaseArg === undefined) {
   console.log('\n======================================================');
-  console.log('🤖 HSL CARE SMART ROVER — HACKATHON STAGED RELEASE TOOL');
+  console.log('🤖 ALEA CARE SMART ROVER — HACKATHON STAGED RELEASE TOOL');
   console.log('======================================================\n');
   console.log('Available phases to release:\n');
   PHASES.forEach(p => {

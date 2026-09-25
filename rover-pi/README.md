@@ -23,6 +23,6 @@ python3 rover_client.py --server http://192.168.43.100:4000
 ---
 
 ## 3. What It Does Automatically
-- Registers as **Rover-01** with the HSL Care backend.
+- Registers as **Rover-01** with the ALEA Care backend.
 - Receives autonomous navigation commands (`NAVIGATE` to Room 101/102/103, `RETURN_TO_DOCK`, `ESTOP`).
 - Streams real-time telemetry, coordinates, and battery level directly into the Caregiver Station and 2D Mission Monitor!

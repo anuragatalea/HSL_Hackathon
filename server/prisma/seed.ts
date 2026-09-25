@@ -8,7 +8,7 @@ function hashPassword(password: string): string {
 }
 
 async function main() {
-  console.log('🌱 Starting HSL Care Smart Rover database seeding...');
+  console.log('🌱 Starting ALEA Care Smart Rover database seeding...');
 
   // 1. Clean existing records in reverse dependency order
   await prisma.roverAuditLog.deleteMany();

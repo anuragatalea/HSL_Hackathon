@@ -37,7 +37,7 @@ app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'online',
-    system: 'HSL Care Smart Rover API',
+    system: 'ALEA Care Smart Rover API',
     roverMode: process.env.ROVER_MODE || 'HARDWARE',
     timestamp: new Date().toISOString()
   });
@@ -69,7 +69,7 @@ const PORT = process.env.PORT || 4000;
 
 server.listen(PORT, () => {
   console.log('🤖 ==============================================================');
-  console.log(`🤖 HSL CARE SMART ROVER — BACKEND API SERVER RUNNING ON PORT ${PORT}`);
+  console.log(`🤖 ALEA CARE SMART ROVER — BACKEND API SERVER RUNNING ON PORT ${PORT}`);
   console.log(`🤖 Real-time WebSocket: ws://localhost:${PORT}`);
   console.log(`🤖 Rover Operation Mode: ${process.env.ROVER_MODE || 'SIMULATION'}`);
   console.log('🤖 ==============================================================');
