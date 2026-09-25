@@ -63,6 +63,8 @@ app.use((err: any, req: express.Request, res: express.Response, next: express.Ne
   res.status(500).json({ success: false, error: err.message || 'Internal Server Error' });
 });
 
+import { getRoverAdapter } from './rover/roverManager.js';
+
 const PORT = process.env.PORT || 4000;
 
 server.listen(PORT, () => {
@@ -71,6 +73,9 @@ server.listen(PORT, () => {
   console.log(`🤖 Real-time WebSocket: ws://localhost:${PORT}`);
   console.log(`🤖 Rover Operation Mode: ${process.env.ROVER_MODE || 'SIMULATION'}`);
   console.log('🤖 ==============================================================');
+
+  // Immediately initialize rover adapter & connect to physical robot
+  getRoverAdapter();
 });
 
 export { app, server };

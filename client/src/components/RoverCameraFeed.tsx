@@ -20,7 +20,7 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
   isFullscreen = false
 }) => {
   const [streamMode, setStreamMode] = useState<'synthetic' | 'webcam' | 'hardware'>('synthetic');
-  const [streamUrl, setStreamUrl] = useState<string>('http://192.168.1.150:5000/video_feed');
+  const [streamUrl, setStreamUrl] = useState<string>('/api/rover/devices/stream');
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [tempUrl, setTempUrl] = useState(streamUrl);
   const [hardwareError, setHardwareError] = useState(false);
@@ -569,7 +569,7 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
             type="text"
             value={tempUrl}
             onChange={(e) => setTempUrl(e.target.value)}
-            placeholder="http://192.168.1.150:5000/video_feed"
+            placeholder="/api/rover/devices/stream"
             style={{
               background: '#020617',
               border: '1px solid #334155',

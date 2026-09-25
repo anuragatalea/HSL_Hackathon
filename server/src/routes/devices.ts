@@ -37,6 +37,69 @@ devicesRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
+const defaultRoverIp = process.env.ROVER_IP || '192.168.80.155';
+const defaultRoverPort = process.env.ROVER_PORT || '5000';
+
+let roverCameraConfig = {
+  streamUrl: process.env.ROVER_CAMERA_URL || `/api/rover/devices/stream`,
+  resolution: '1280x720',
+  fps: 30,
+  mode: process.env.ROVER_MODE || 'HARDWARE'
+};
+
+// Handler for proxying live MJPEG camera stream from Waveshare robot
+const handleCameraStream = async (req: Request, res: Response) => {
+  const roverIp = process.env.ROVER_IP || '192.168.80.155';
+  const roverPort = process.env.ROVER_PORT || '5000';
+  const roverPin = process.env.ROVER_PIN || '1122';
+
+  try {
+    // 1. Authenticate with PIN on robot
+    const loginResp = await fetch(`http://${roverIp}:${roverPort}/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: `pin=${encodeURIComponent(roverPin)}`,
+      redirect: 'manual'
+    });
+
+    const cookieHeader = loginResp.headers.get('set-cookie');
+    const cookie = cookieHeader ? cookieHeader.split(';')[0] : '';
+
+    // 2. Fetch the live MJPEG stream
+    const streamResp = await fetch(`http://${roverIp}:${roverPort}/video_feed`, {
+      headers: cookie ? { Cookie: cookie } : {}
+    });
+
+    if (!streamResp.ok || !streamResp.body) {
+      res.status(502).send('Camera stream unreachable on robot');
+      return;
+    }
+
+    res.setHeader('Content-Type', streamResp.headers.get('content-type') || 'multipart/x-mixed-replace; boundary=frame');
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Connection', 'keep-alive');
+
+    const reader = streamResp.body.getReader();
+    req.on('close', () => {
+      reader.cancel().catch(() => {});
+    });
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      res.write(value);
+    }
+    res.end();
+  } catch (err: any) {
+    if (!res.headersSent) {
+      res.status(502).json({ success: false, error: err.message });
+    }
+  }
+};
+
+// Proxy live MJPEG camera stream directly from Waveshare robot (handles PIN auth & CORS automatically)
+devicesRouter.get('/stream', handleCameraStream);
+
 // GET device by ID
 devicesRouter.get('/:id', async (req: Request, res: Response) => {
   try {
@@ -56,13 +119,8 @@ devicesRouter.get('/:id', async (req: Request, res: Response) => {
   }
 });
 
-// In-memory camera configuration
-let roverCameraConfig = {
-  streamUrl: process.env.ROVER_CAMERA_URL || 'http://192.168.1.150:5000/video_feed',
-  resolution: '1280x720',
-  fps: 30,
-  mode: process.env.ROVER_MODE || 'SIMULATION'
-};
+// Proxy stream alias with ID
+devicesRouter.get('/:id/camera/stream', handleCameraStream);
 
 // GET camera stream info
 devicesRouter.get('/:id/camera', async (req: Request, res: Response) => {
@@ -79,7 +137,8 @@ devicesRouter.get('/:id/camera', async (req: Request, res: Response) => {
       data: {
         roverId: id,
         roverName: device.name,
-        ...roverCameraConfig
+        ...roverCameraConfig,
+        streamUrl: `/api/rover/devices/stream`
       }
     });
   } catch (err: any) {
