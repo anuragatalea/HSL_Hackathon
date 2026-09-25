@@ -13,8 +13,8 @@ interface HardwareStatus {
 }
 
 interface HeaderProps {
-  activeTab: 'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit' | 'formulary';
-  setActiveTab: (tab: 'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit' | 'formulary') => void;
+  activeTab: 'dashboard' | 'schedules' | 'residents' | 'audit' | 'formulary';
+  setActiveTab: (tab: 'dashboard' | 'schedules' | 'residents' | 'audit' | 'formulary') => void;
   onOpenSchedule?: () => void;
   currentRole: string;
   setCurrentRole: (role: string) => void;
@@ -140,7 +140,6 @@ export function Header({
           { id: 'schedules', label: '📅 Schedules' },
           { id: 'residents', label: '👥 Residents & Care' },
           { id: 'formulary', label: '💊 Formulary' },
-          { id: 'kiosk', label: '📱 Bedside Kiosk' },
           { id: 'audit', label: '📜 Audit Log' }
         ].map((tab) => {
           const isActive = activeTab === tab.id;
