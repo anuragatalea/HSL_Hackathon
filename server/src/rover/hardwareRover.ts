@@ -52,7 +52,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
    * (Zero SSH or manual script execution required!)
    */
   private connectToWaveshareRover() {
-    const roverIp = process.env.ROVER_IP || '192.168.80.155';
+    const roverIp = process.env.ROVER_IP || '192.168.0.11';
     const roverPort = process.env.ROVER_PORT || '5000';
     const roverUrl = `http://${roverIp}:${roverPort}`;
 
@@ -125,7 +125,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
         socket.on('rover:register', (data) => {
           this.isPiConnected = true;
           const rawIp = (socket.handshake.headers['x-forwarded-for'] as string) || socket.handshake.address;
-          this.piIp = rawIp.replace(/^.*:/, '') || this.piIp || '192.168.80.155';
+          this.piIp = rawIp.replace(/^.*:/, '') || this.piIp || '192.168.0.11';
           this.lastHeartbeat = new Date();
 
           console.log(`🤖 [Hardware Rover] Client script registered from IP: ${this.piIp}!`);
@@ -179,7 +179,7 @@ export class HardwareRoverAdapter implements IRoverAdapter {
       roverName: this.name,
       details: this.isPiConnected
         ? `Physical UGV-Beast connected via Direct Web Controller (${this.piIp})`
-        : 'Connecting to Waveshare UGV-Beast at http://192.168.80.155:5000...'
+        : 'Connecting to Waveshare UGV-Beast at http://192.168.0.11:5000...'
     };
   }
 

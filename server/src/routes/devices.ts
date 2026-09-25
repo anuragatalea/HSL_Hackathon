@@ -37,7 +37,7 @@ devicesRouter.get('/', async (req: Request, res: Response) => {
   }
 });
 
-const defaultRoverIp = process.env.ROVER_IP || '192.168.80.155';
+const defaultRoverIp = process.env.ROVER_IP || '192.168.0.11';
 const defaultRoverPort = process.env.ROVER_PORT || '5000';
 
 let roverCameraConfig = {
@@ -49,7 +49,7 @@ let roverCameraConfig = {
 
 // Handler for proxying live MJPEG camera stream from Waveshare robot
 const handleCameraStream = async (req: Request, res: Response) => {
-  const roverIp = process.env.ROVER_IP || '192.168.80.155';
+  const roverIp = process.env.ROVER_IP || '192.168.0.11';
   const roverPort = process.env.ROVER_PORT || '5000';
   const roverPin = process.env.ROVER_PIN || '1122';
 
