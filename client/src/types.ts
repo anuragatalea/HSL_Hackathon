@@ -140,6 +140,11 @@ export interface ResidentAssistance {
   resolvedAt?: string | null;
   notes?: string | null;
   createdAt: string;
+  roverDispatched?: boolean;
+  roverStatus?: string;
+  busyReason?: string;
+  priority?: 'NORMAL' | 'HIGH';
+  message?: string;
 }
 
 export type UserRole = 'ADMIN' | 'NURSE' | 'CAREGIVER' | 'STAFF';

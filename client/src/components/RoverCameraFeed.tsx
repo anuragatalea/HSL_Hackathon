@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Maximize2, Minimize2, Video, Sparkles, Globe, Download, Settings, ShieldCheck } from 'lucide-react';
+import { Maximize2, Minimize2, Video, Globe, Download, Settings, ShieldCheck } from 'lucide-react';
 import { RoverDevice, RoverTask } from '../types.js';
 
 interface RoverCameraFeedProps {

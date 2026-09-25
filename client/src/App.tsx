@@ -10,6 +10,7 @@ import { RoverKiosk } from './components/RoverKiosk.js';
 import { AuditLogViewer } from './components/AuditLogViewer.js';
 import { ScheduleModal } from './components/ScheduleModal.js';
 import { AuthModal } from './components/AuthModal.js';
+import { AssistanceAlertBanner } from './components/AssistanceAlertBanner.js';
 
 function AppContent() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'schedules' | 'residents' | 'kiosk' | 'audit'>('dashboard');
@@ -64,6 +65,8 @@ function AppContent() {
 
       {/* Main Content Area */}
       <main style={{ flex: 1, padding: '24px', maxWidth: '1440px', margin: '0 auto', width: '100%' }}>
+        <AssistanceAlertBanner />
+
         {activeTab === 'dashboard' && (
           <Dashboard
             currentRole={currentRole}
