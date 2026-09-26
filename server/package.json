@@ -14,6 +14,7 @@
     "db:migrate": "prisma migrate dev",
     "db:seed": "tsx prisma/seed.ts",
     "db:seed:force": "tsx prisma/seed.ts --force",
+    "db:seed:people": "tsx prisma/seed-robo-people.ts",
     "db:studio": "prisma studio",
     "test:fsm": "tsx src/tests/verifyPhase2.ts",
     "test:api": "tsx src/tests/verifyPhase3.ts",
@@ -40,7 +41,7 @@
     "@types/node": "^22.13.9",
     "prisma": "^6.4.1",
     "socket.io-client": "^4.8.3",
-    "tsx": "^4.19.3",
+    "tsx": "^4.23.15",
     "typescript": "^5.8.2"
   }
 }
