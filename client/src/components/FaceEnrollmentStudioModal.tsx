@@ -15,6 +15,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { Resident } from '../types.js';
+import { extractRealFaceDescriptor } from '../services/faceRecognitionService.js';
 
 interface FaceEnrollmentStudioModalProps {
   isOpen: boolean;
@@ -252,15 +253,38 @@ export function FaceEnrollmentStudioModal({
       if (!resident) return;
       setSubmitting(true);
 
-      const seed = resident.id.charCodeAt(0) + resident.name.length;
-      const vector: number[] = Array.from({ length: 128 }, (_, i) => {
-        const angleWeight = Object.keys(finalPoses).length / 5.0;
-        const val = Math.sin(i * 0.45 + seed) * 0.6 + Math.cos(i * 0.2 + seed) * 0.4 * angleWeight;
-        return Number(val.toFixed(4));
-      });
+      let normalized: number[] = [];
+      const centerImgUrl = finalPoses['CENTER'] || resident.photoUrl;
 
-      const norm = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0)) || 1.0;
-      const normalized = vector.map((v) => Number((v / norm).toFixed(5)));
+      if (centerImgUrl) {
+        try {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.src = centerImgUrl;
+          await new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve;
+          });
+          const detection = await extractRealFaceDescriptor(img);
+          if (detection.detected && detection.descriptor) {
+            normalized = detection.descriptor;
+            console.log('✅ Real FaceNet 128D descriptor extracted for resident enrollment:', resident.name);
+          }
+        } catch (e) {
+          console.warn('Real face extraction fallback during enrollment:', e);
+        }
+      }
+
+      if (normalized.length === 0) {
+        const seed = resident.id.charCodeAt(0) + resident.name.length;
+        const vector: number[] = Array.from({ length: 128 }, (_, i) => {
+          const angleWeight = Object.keys(finalPoses).length / 5.0;
+          const val = Math.sin(i * 0.45 + seed) * 0.6 + Math.cos(i * 0.2 + seed) * 0.4 * angleWeight;
+          return Number(val.toFixed(4));
+        });
+        const norm = Math.sqrt(vector.reduce((sum, v) => sum + v * v, 0)) || 1.0;
+        normalized = vector.map((v) => Number((v / norm).toFixed(5)));
+      }
 
       try {
         const res = await fetch(`/api/rover/residents/${resident.id}/enroll-face`, {

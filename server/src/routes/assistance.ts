@@ -1,7 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { prisma } from '../prisma.js';
 import { broadcast } from '../socket.js';
-import { ActorType } from '@prisma/client';
+import { ActorType, TaskStatus } from '@prisma/client';
 import { logAuditEvent } from '../services/auditService.js';
 import { getRoverAdapter } from '../rover/roverManager.js';
 
@@ -95,12 +95,44 @@ assistanceRouter.post('/', async (req: Request, res: Response) => {
         y: room?.waypointY ?? 10.0
       };
 
-      // Instruct Rover Adapter & Edge Pi to navigate to room
-      roverAdapter.dispatchToRoom(assistance.id, room?.number || roomId, targetCoords).catch(console.error);
+      // Find or create active RoverDevice record
+      let rover = await prisma.roverDevice.findFirst({ where: { isActive: true } });
+      if (!rover) {
+        rover = await prisma.roverDevice.create({
+          data: { name: 'Rover-01', status: 'IDLE' }
+        });
+      }
+
+      // Create a valid RoverTask so the state machine and hardware adapter can track it
+      const emergencyTask = await prisma.roverTask.create({
+        data: {
+          residentId: assistance.residentId,
+          roomId: room?.number || roomId,
+          roverId: rover.id,
+          status: TaskStatus.DISPATCHED,
+          scheduledAt: new Date(),
+          startedAt: new Date(),
+          medications: [
+            {
+              name: 'Emergency Assistance / Rapid First Responder',
+              dose: 'Immediate Presence',
+              instructions: assistance.requestType,
+              compartment: 0
+            }
+          ]
+        },
+        include: { resident: true }
+      });
+
+      broadcast('task:updated', emergencyTask);
+
+      // Instruct Rover Adapter & Edge Pi to navigate to room using emergencyTask.id
+      roverAdapter.dispatchToRoom(emergencyTask.id, room?.number || roomId, targetCoords).catch(console.error);
 
       broadcast('rover:command', {
         command: 'NAVIGATE',
         type: 'ASSISTANCE',
+        taskId: emergencyTask.id,
         assistanceId: assistance.id,
         targetRoom: room?.number || roomId,
         targetX: targetCoords.x,

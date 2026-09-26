@@ -13,6 +13,10 @@ export default defineConfig({
         target: backendUrl,
         changeOrigin: true
       },
+      '/uploads': {
+        target: backendUrl,
+        changeOrigin: true
+      },
       '/socket.io': {
         target: backendUrl,
         ws: true

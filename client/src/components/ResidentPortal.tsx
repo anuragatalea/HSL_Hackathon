@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
-import { Resident } from '../types.js';
-import { Bot, BellRing, Activity, Clock, LogOut, CheckCircle2, ShieldCheck, PhoneCall } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Resident, RoverTask } from '../types.js';
+import { Bot, BellRing, Activity, Clock, LogOut, CheckCircle2, ShieldCheck, PhoneCall, Camera } from 'lucide-react';
 import { socket } from '../socket.js';
+import { BedsideVerificationModal } from './BedsideVerificationModal.js';
 
 interface ResidentPortalProps {
   resident: Resident;
@@ -18,6 +19,8 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
   const [assistanceFeedback, setAssistanceFeedback] = useState<AssistanceFeedback | null>(null);
   const [isCalling, setIsCalling] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
+  const [activeTask, setActiveTask] = useState<RoverTask | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -83,6 +86,52 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
       socket.off('assistance:resolved', onAssistanceUpdate);
     };
   }, [resident.id]);
+
+  // Fetch active delivery tasks for this resident
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res = await fetch('/api/rover/tasks');
+      const json = await res.json();
+      if (json.success && Array.isArray(json.data)) {
+        // Find most recent task for this resident in any active or completed status
+        const residentTasks = json.data.filter((t: RoverTask) => t.residentId === resident.id);
+        const active = residentTasks.find((t: RoverTask) =>
+          ['ARRIVED', 'AWAITING_CONFIRMATION', 'DISPATCHED', 'EN_ROUTE'].includes(t.status)
+        );
+        if (active) {
+          setActiveTask(active);
+        } else if (residentTasks.length > 0) {
+          setActiveTask(residentTasks[0]);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed to fetch tasks in resident portal:', e);
+    }
+  }, [resident.id]);
+
+  useEffect(() => {
+    fetchTasks();
+
+    const handleTaskUpdate = (updatedTask: any) => {
+      if (updatedTask?.residentId === resident.id) {
+        setActiveTask(updatedTask);
+      }
+    };
+
+    const handleArrived = (data: any) => {
+      if (data?.roomNumber === resident.roomNumber) {
+        fetchTasks();
+      }
+    };
+
+    socket.on('task:updated', handleTaskUpdate);
+    socket.on('rover:arrived', handleArrived);
+
+    return () => {
+      socket.off('task:updated', handleTaskUpdate);
+      socket.off('rover:arrived', handleArrived);
+    };
+  }, [resident.id, resident.roomNumber, fetchTasks]);
 
   const handleRequestAssistance = async () => {
     setIsCalling(true);
@@ -358,6 +407,83 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
               </span>
             </div>
 
+            {/* Live Delivery Status & Bedside Camera Verification CTA */}
+            {activeTask && (activeTask.status === 'ARRIVED' || activeTask.status === 'AWAITING_CONFIRMATION') ? (
+              <div style={{
+                background: 'linear-gradient(135deg, rgba(2, 132, 199, 0.25) 0%, rgba(56, 189, 248, 0.25) 100%)',
+                border: '2px solid #38bdf8',
+                borderRadius: '16px',
+                padding: '20px',
+                boxShadow: '0 0 30px rgba(56, 189, 248, 0.4)',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
+                  <span className="ping-indicator" />
+                  <span style={{ color: '#38bdf8', fontWeight: 800, fontSize: '1.05rem' }}>
+                    🤖 Rover-01 Has Arrived At Room {resident.roomNumber}!
+                  </span>
+                </div>
+                <p style={{ margin: '0 0 16px 0', fontSize: '0.875rem', color: 'hsl(215, 20%, 90%)', lineHeight: 1.5 }}>
+                  The mobile robot is at your door with your morning medication package. Please look directly into the rover's camera to verify your face and accept delivery.
+                </p>
+                <button
+                  onClick={() => setIsVerifying(true)}
+                  style={{
+                    width: '100%',
+                    padding: '14px 20px',
+                    borderRadius: '12px',
+                    border: 'none',
+                    background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                    color: '#ffffff',
+                    fontWeight: 800,
+                    fontSize: '1rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '10px',
+                    boxShadow: '0 0 25px rgba(56, 189, 248, 0.55)',
+                    transition: 'transform 0.15s ease'
+                  }}
+                >
+                  <Camera size={22} />
+                  <span>Look Into Rover Camera & Verify Face</span>
+                </button>
+              </div>
+            ) : activeTask && (activeTask.status === 'DISPATCHED' || activeTask.status === 'EN_ROUTE') ? (
+              <div style={{
+                background: 'rgba(245, 158, 11, 0.15)',
+                border: '1px solid rgba(245, 158, 11, 0.4)',
+                borderRadius: '12px',
+                padding: '14px 18px',
+                marginBottom: '16px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div className="ping-indicator" style={{ background: '#f59e0b' }} />
+                <span style={{ color: '#fbbf24', fontWeight: 700, fontSize: '0.9rem' }}>
+                  Rover-01 is en route through the corridor to Room {resident.roomNumber}...
+                </span>
+              </div>
+            ) : activeTask && activeTask.status === 'COMPLETED' ? (
+              <div style={{
+                background: 'rgba(16, 185, 129, 0.15)',
+                border: '1px solid rgba(16, 185, 129, 0.4)',
+                borderRadius: '12px',
+                padding: '16px',
+                marginBottom: '16px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#34d399', fontWeight: 800, fontSize: '0.95rem' }}>
+                  <CheckCircle2 size={18} />
+                  <span>Medication Delivered & Verified via Bedside Camera</span>
+                </div>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.85rem', color: 'hsl(215, 20%, 80%)' }}>
+                  Biometric identity confirmed. Clinical proof photo archived. Rover-01 has departed back to the docking station.
+                </p>
+              </div>
+            ) : null}
+
             {activeSchedule ? (
               <div>
                 <div style={{ fontSize: '1.25rem', fontWeight: 800, color: '#38bdf8', marginBottom: '6px' }}>
@@ -539,6 +665,18 @@ export function ResidentPortal({ resident, onLogout }: ResidentPortalProps) {
           </div>
         </div>
       </main>
+
+      {/* Bedside Biometric Verification Modal */}
+      <BedsideVerificationModal
+        isOpen={isVerifying}
+        onClose={() => setIsVerifying(false)}
+        task={activeTask}
+        onSuccess={() => {
+          setIsVerifying(false);
+          fetchTasks();
+        }}
+        currentRole={`Resident Bedside (${resident.name})`}
+      />
     </div>
   );
 }

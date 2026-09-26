@@ -158,6 +158,14 @@ async function main() {
 
   console.log('📍 Seeded 6 facility locations and waypoints.');
 
+  // 128D biometric vector template for Mary Johnson
+  const maryEmbeddings = Array.from({ length: 128 }, (_, i) => {
+    const val = Math.sin(i * 0.45 + 102) * 0.6 + Math.cos(i * 0.2 + 102) * 0.4;
+    return Number(val.toFixed(4));
+  });
+  const mNorm = Math.sqrt(maryEmbeddings.reduce((s, v) => s + v * v, 0)) || 1.0;
+  const maryNormalized = maryEmbeddings.map(v => Number((v / mNorm).toFixed(5)));
+
   // 4. Seed Residents
   const mary = await prisma.resident.create({
     data: {
@@ -165,6 +173,7 @@ async function main() {
       roomNumber: '102',
       notes: 'Hero Resident. Enjoys morning comfort items. Prefers calm voice greeting.',
       photoUrl: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80',
+      faceEmbeddings: maryNormalized,
       isEnrolled: true,
       enrolledAt: new Date(Date.now() - 86400000 * 2) // Enrolled 2 days ago
     }

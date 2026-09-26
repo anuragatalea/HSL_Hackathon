@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { Play, FastForward, CheckCircle2, Clock, Package, AlertCircle } from 'lucide-react';
+import { Play, FastForward, CheckCircle2, Clock, Package, AlertCircle, Camera } from 'lucide-react';
 import { RoverTask, TaskStatus } from '../types.js';
+import { BedsideVerificationModal } from './BedsideVerificationModal.js';
 
 interface TasksTableProps {
   tasks: RoverTask[];
@@ -11,6 +12,7 @@ interface TasksTableProps {
 export function TasksTable({ tasks, onRefresh, currentRole }: TasksTableProps) {
   const [filter, setFilter] = useState<'ALL' | 'READY' | 'ACTIVE' | 'SNOOZED' | 'COMPLETED'>('ALL');
   const [loadingTaskId, setLoadingTaskId] = useState<string | null>(null);
+  const [verifyingTask, setVerifyingTask] = useState<RoverTask | null>(null);
 
   const filteredTasks = tasks.filter(task => {
     if (filter === 'READY') return task.status === 'READY' || task.status === 'SCHEDULED';
@@ -48,25 +50,6 @@ export function TasksTable({ tasks, onRefresh, currentRole }: TasksTableProps) {
     }
   };
 
-  const handleConfirm = async (taskId: string) => {
-    setLoadingTaskId(taskId);
-    try {
-      await fetch(`/api/rover/tasks/${taskId}/confirm`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          staffId: currentRole,
-          confidence: 98,
-          notes: 'Biometric face match verified at bedside.'
-        })
-      });
-      onRefresh();
-    } catch (e) {
-      console.error(e);
-    } finally {
-      setLoadingTaskId(null);
-    }
-  };
 
   const handleManualResolve = async (taskId: string) => {
     setLoadingTaskId(taskId);
@@ -330,24 +313,24 @@ export function TasksTable({ tasks, onRefresh, currentRole }: TasksTableProps) {
 
                       {(task.status === 'ARRIVED' || task.status === 'AWAITING_CONFIRMATION') && (
                         <button
-                          onClick={() => handleConfirm(task.id)}
+                          onClick={() => setVerifyingTask(task)}
                           disabled={isLoading}
                           className="btn btn-primary"
                           style={{
                             padding: '6px 14px',
                             fontSize: '0.75rem',
-                            background: '#10b981',
-                            borderColor: '#10b981',
+                            background: 'linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)',
+                            borderColor: '#38bdf8',
                             color: '#ffffff',
                             fontWeight: 700,
                             display: 'inline-flex',
                             alignItems: 'center',
                             gap: '6px',
-                            boxShadow: '0 0 10px rgba(16, 185, 129, 0.4)'
+                            boxShadow: '0 0 12px rgba(56, 189, 248, 0.45)'
                           }}
                         >
-                          <CheckCircle2 size={14} />
-                          <span>Dispense & Confirm</span>
+                          <Camera size={14} />
+                          <span>Verify Face & Dispense</span>
                         </button>
                       )}
 
@@ -364,6 +347,18 @@ export function TasksTable({ tasks, onRefresh, currentRole }: TasksTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Bedside Biometric Verification & Delivery Proof Modal */}
+      <BedsideVerificationModal
+        isOpen={!!verifyingTask}
+        task={verifyingTask}
+        onClose={() => setVerifyingTask(null)}
+        onSuccess={() => {
+          setVerifyingTask(null);
+          onRefresh();
+        }}
+        currentRole={currentRole}
+      />
     </div>
   );
 }

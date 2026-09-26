@@ -33,3 +33,7 @@ Thumbs.db
 server/uploads/*
 !server/uploads/.gitkeep
 
+# Neural network model weights
+client/public/models/
+
+

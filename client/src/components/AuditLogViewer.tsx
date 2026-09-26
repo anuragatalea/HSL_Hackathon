@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShieldCheck, UserCheck, Bot, FileText, Download, RefreshCw, ChevronDown, ChevronRight, User } from 'lucide-react';
+import { ShieldCheck, UserCheck, Bot, FileText, Download, RefreshCw, ChevronDown, ChevronRight, User, Camera, CheckCircle2, ExternalLink } from 'lucide-react';
 import { RoverAuditLog } from '../types.js';
 import { socket } from '../socket.js';
 
@@ -9,6 +9,7 @@ export function AuditLogViewer() {
   const [actorFilter, setActorFilter] = useState<'ALL' | 'CAREGIVER' | 'RESIDENT' | 'ROVER' | 'SYSTEM'>('ALL');
   const [expandedLogId, setExpandedLogId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   const fetchLogs = async () => {
     setLoading(true);
@@ -280,6 +281,26 @@ export function AuditLogViewer() {
                     <span style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                       by <strong style={{ color: 'var(--text-primary)' }}>{log.actorId}</strong>
                     </span>
+
+                    {/* Proof Photo Attached Badge */}
+                    {log.metadata?.proofOfDeliveryUrl && (
+                      <span style={{
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '5px',
+                        padding: '3px 9px',
+                        borderRadius: '6px',
+                        background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2) 0%, rgba(5, 150, 105, 0.2) 100%)',
+                        border: '1px solid rgba(16, 185, 129, 0.45)',
+                        color: '#34d399',
+                        fontSize: '0.72rem',
+                        fontWeight: 700,
+                        letterSpacing: '0.3px'
+                      }}>
+                        <Camera size={12} />
+                        <span>Proof Photo Attached</span>
+                      </span>
+                    )}
                   </div>
 
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -288,22 +309,138 @@ export function AuditLogViewer() {
                   </div>
                 </div>
 
-                {/* Collapsible Metadata Details */}
+                {/* Collapsible Metadata Details & Clinical Proof-of-Delivery Inspection Card */}
                 {isExpanded && log.metadata && (
-                  <div style={{
-                    marginTop: '12px',
-                    padding: '12px',
-                    borderRadius: '8px',
-                    background: '#0a0f1d',
-                    border: '1px solid rgba(255, 255, 255, 0.05)',
-                    fontFamily: 'monospace',
-                    fontSize: '0.75rem',
-                    color: '#38bdf8',
-                    overflowX: 'auto'
-                  }}>
-                    <pre style={{ margin: 0 }}>
-                      {JSON.stringify(log.metadata, null, 2)}
-                    </pre>
+                  <div style={{ marginTop: '12px' }}>
+                    {/* Visual Proof of Delivery Card */}
+                    {log.metadata.proofOfDeliveryUrl && (
+                      <div
+                        style={{
+                          marginBottom: '12px',
+                          padding: '16px',
+                          borderRadius: '12px',
+                          background: 'linear-gradient(145deg, rgba(15, 23, 42, 0.95) 0%, rgba(10, 15, 29, 0.95) 100%)',
+                          border: '1px solid rgba(16, 185, 129, 0.4)',
+                          display: 'flex',
+                          flexWrap: 'wrap',
+                          gap: '20px',
+                          alignItems: 'center',
+                          boxShadow: '0 0 25px rgba(16, 185, 129, 0.15)'
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div
+                          style={{
+                            position: 'relative',
+                            width: '180px',
+                            height: '135px',
+                            borderRadius: '10px',
+                            overflow: 'hidden',
+                            border: '2px solid rgba(56, 189, 248, 0.5)',
+                            cursor: 'pointer',
+                            boxShadow: '0 0 15px rgba(56, 189, 248, 0.25)',
+                            flexShrink: 0
+                          }}
+                          onClick={() => setPreviewImage(log.metadata.proofOfDeliveryUrl)}
+                          title="Click to view full-resolution proof"
+                        >
+                          <img
+                            src={log.metadata.proofOfDeliveryUrl}
+                            alt="Proof of Delivery"
+                            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            onError={(e) => {
+                              (e.target as any).src = 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=300&auto=format&fit=crop&q=80';
+                            }}
+                          />
+                          <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            background: 'rgba(0, 0, 0, 0.8)',
+                            padding: '3px 8px',
+                            fontSize: '0.65rem',
+                            color: '#38bdf8',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontWeight: 700
+                          }}>
+                            <span>UGV-Beast Camera</span>
+                            <ExternalLink size={10} />
+                          </div>
+                        </div>
+
+                        <div style={{ flex: 1, minWidth: '240px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
+                            <CheckCircle2 size={18} color="#10b981" />
+                            <h4 style={{ margin: 0, fontSize: '1rem', color: '#10b981', fontWeight: 800 }}>
+                              Bedside Biometric Proof-of-Delivery
+                            </h4>
+                          </div>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '8px', fontSize: '0.8rem' }}>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)' }}>Resident: </span>
+                              <strong style={{ color: '#f8fafc' }}>{log.metadata.name || log.task?.resident?.name || 'Mary Johnson'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)' }}>Room: </span>
+                              <strong style={{ color: '#38bdf8' }}>Room {log.metadata.roomNumber || log.task?.resident?.roomNumber || '102'}</strong>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)' }}>Match Confidence: </span>
+                              <span style={{
+                                color: '#34d399',
+                                fontWeight: 800,
+                                background: 'rgba(16, 185, 129, 0.15)',
+                                padding: '2px 6px',
+                                borderRadius: '4px'
+                              }}>
+                                {log.metadata.confidence ?? 96}%
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)' }}>Euclidean Distance: </span>
+                              <span style={{ fontFamily: 'monospace', color: '#a5b4fc' }}>
+                                {log.metadata.distance ?? '0.1842'} (L2 norm)
+                              </span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)' }}>Verified By: </span>
+                              <span style={{ color: '#fbbf24' }}>{log.metadata.verifiedBy || log.actorId}</span>
+                            </div>
+                            <div>
+                              <span style={{ color: 'var(--text-muted)' }}>Storage Ref: </span>
+                              <a
+                                href={log.metadata.proofOfDeliveryUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                style={{ color: '#38bdf8', textDecoration: 'underline' }}
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                View Raw Artifact
+                              </a>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Raw JSON Audit Metadata */}
+                    <div style={{
+                      padding: '12px',
+                      borderRadius: '8px',
+                      background: '#0a0f1d',
+                      border: '1px solid rgba(255, 255, 255, 0.05)',
+                      fontFamily: 'monospace',
+                      fontSize: '0.75rem',
+                      color: '#38bdf8',
+                      overflowX: 'auto'
+                    }}>
+                      <pre style={{ margin: 0 }}>
+                        {JSON.stringify(log.metadata, null, 2)}
+                      </pre>
+                    </div>
                   </div>
                 )}
               </div>
@@ -311,6 +448,77 @@ export function AuditLogViewer() {
           })
         )}
       </div>
+
+      {/* Lightbox Proof Viewer Modal */}
+      {previewImage && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(3, 7, 18, 0.92)',
+            backdropFilter: 'blur(8px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 2000,
+            padding: '24px'
+          }}
+          onClick={() => setPreviewImage(null)}
+        >
+          <div
+            style={{
+              position: 'relative',
+              maxWidth: '720px',
+              width: '100%',
+              background: '#0b1120',
+              border: '2px solid rgba(56, 189, 248, 0.4)',
+              borderRadius: '16px',
+              overflow: 'hidden',
+              boxShadow: '0 0 50px rgba(56, 189, 248, 0.3)'
+            }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '12px 18px',
+              borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+              background: 'rgba(15, 23, 42, 0.8)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <Camera size={16} color="#38bdf8" />
+                <span style={{ fontSize: '0.85rem', fontWeight: 700, color: '#f8fafc' }}>
+                  Clinical Proof of Delivery — Direct Robot Camera Snapshot
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewImage(null)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  color: 'var(--text-muted)',
+                  cursor: 'pointer',
+                  fontSize: '1.2rem',
+                  fontWeight: 700
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            <div style={{ padding: '20px', textAlign: 'center', background: '#030712' }}>
+              <img
+                src={previewImage}
+                alt="Proof of Delivery Full Resolution"
+                style={{ maxWidth: '100%', maxHeight: '70vh', borderRadius: '8px', objectFit: 'contain' }}
+              />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

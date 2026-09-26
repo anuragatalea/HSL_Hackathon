@@ -120,8 +120,13 @@ def on_rover_command(data):
             print(f"🎯 [UGV-Beast] Physically Arrived at Room {target_room} for {resident_name}!")
             speak(f"Arrived at Room {target_room} for {resident_name}. Ready for biometric verification.")
 
+    elif command == 'SPEAK':
+        speak_text = data.get('text', 'Identity verified. Medication dispensed. Returning to dock.')
+        speak(speak_text)
+
     elif command == 'RETURN_TO_DOCK':
         print("🔋 [UGV-Beast] Driving back to Rover Dock...")
+        speak("Returning to charging dock.")
         ROVER_STATE["status"] = "RETURNING"
         ROVER_STATE["currentRoom"] = "CORRIDOR"
         send_telemetry()
