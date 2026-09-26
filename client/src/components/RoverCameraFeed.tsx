@@ -59,8 +59,6 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
   const [isIdentifying, setIsIdentifying] = useState(false);
   const [identificationResult, setIdentificationResult] = useState<any>(null);
   const [autoScanEnabled, setAutoScanEnabled] = useState(true);
-  const [enrolledResidents, setEnrolledResidents] = useState<any[]>([]);
-  const [simulatedSubjectId, setSimulatedSubjectId] = useState<string>('auto');
   const [detectedFaceBox, setDetectedFaceBox] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
 
   // Pre-load real neural network models on mount
@@ -79,19 +77,6 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
 
   // Fetch camera config from backend
   const roverId = rover?.id || (rover as any)?.roverId;
-
-  // Fetch enrolled residents for biometric matching & test selector
-  useEffect(() => {
-    fetch('/api/rover/residents')
-      .then(res => res.json())
-      .then(json => {
-        const list = Array.isArray(json.data) ? json.data : (Array.isArray(json.residents) ? json.residents : []);
-        if (list.length > 0) {
-          setEnrolledResidents(list.filter((r: any) => r.isEnrolled && r.faceEmbeddings));
-        }
-      })
-      .catch(console.error);
-  }, []);
 
   useEffect(() => {
     if (!roverId) return;
@@ -463,24 +448,6 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
 
       setDetectedFaceBox(null);
 
-      // Developer manual simulation overrides (only if user explicitly picked non-auto test item)
-      if (simulatedSubjectId === 'unknown') {
-        return {
-          candidateVector: Array.from({ length: 128 }, () => (Math.random() - 0.5) * 2),
-          candidateImage,
-          faceDetected: false
-        };
-      } else if (simulatedSubjectId !== 'auto') {
-        const target = enrolledResidents.find(r => r.id === simulatedSubjectId);
-        if (target?.faceEmbeddings) {
-          return {
-            candidateVector: (target.faceEmbeddings as number[]).map(v => v + (Math.random() - 0.5) * 0.02),
-            candidateImage,
-            faceDetected: true
-          };
-        }
-      }
-
       // In Auto-Detect mode when no face is found in camera view: NO FACE DETECTED
       return {
         candidateImage,
@@ -604,7 +571,7 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
     }, 1800);
 
     return () => clearInterval(interval);
-  }, [autoScanEnabled, streamMode, activeTask?.id, isIdentifying, simulatedSubjectId, enrolledResidents]);
+  }, [autoScanEnabled, streamMode, activeTask?.id, isIdentifying]);
 
   const isMoving = rover?.status === 'MOVING' || rover?.status === 'RETURNING';
 
@@ -773,34 +740,6 @@ export const RoverCameraFeed: React.FC<RoverCameraFeedProps> = ({
             }} />
             <span>{autoScanEnabled ? '⚡ AUTO-WATCH: ON' : 'AUTO-WATCH: OFF'}</span>
           </button>
-
-          {/* Quick Subject in Lens Selector */}
-          {enrolledResidents.length > 0 && (
-            <select
-              value={simulatedSubjectId}
-              onChange={(e) => setSimulatedSubjectId(e.target.value)}
-              title="Subject in Front of Rover Camera Lens"
-              style={{
-                background: 'rgba(15, 23, 42, 0.85)',
-                border: '1px solid rgba(56, 189, 248, 0.4)',
-                color: '#38bdf8',
-                borderRadius: '8px',
-                fontSize: '10px',
-                padding: '2px 6px',
-                fontWeight: 600,
-                cursor: 'pointer',
-                outline: 'none'
-              }}
-            >
-              <option value="auto">👤 Lens: Auto-Detect</option>
-              {enrolledResidents.map(r => (
-                <option key={r.id} value={r.id}>
-                  👤 {r.name} (Rm {r.roomNumber})
-                </option>
-              ))}
-              <option value="unknown">❌ Stranger / Unenrolled</option>
-            </select>
-          )}
 
           {/* On-Demand Face Scan Button */}
           <button
